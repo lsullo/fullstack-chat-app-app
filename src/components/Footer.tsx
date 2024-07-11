@@ -7,9 +7,9 @@ const Footer = () => {
 				<p>
 					Made with ❤️ by{' '}
 					<Link className="link" to="https://focusotter.com">
-						Focus Otter
+						LTM
 					</Link>{' '}
-					🦦
+					🥷🏻
 				</p>
 			</aside>
 		</footer>
