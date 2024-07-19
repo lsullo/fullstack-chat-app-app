@@ -1,17 +1,12 @@
-import { useAuthenticator } from '@aws-amplify/ui-react'
-import { fetchAuthSession } from 'aws-amplify/auth'
-import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link } from 'react-router-dom';
 
-const Navbar = () => {
-	const { user, signOut } = useAuthenticator((context) => [context.user])
-	const [fetchedUserNickname, setFetchedUserNickname] = useState('')
+interface NavbarProps {
+	user: any;
+	signOut: () => void;
+	fetchedUserNickname: string;
+}
 
-	useEffect(() => {
-		fetchAuthSession().then((user2) => {
-			setFetchedUserNickname(user2.tokens?.idToken?.payload.nickname as string)
-		})
-	}, [])
+const Navbar: React.FC<NavbarProps> = ({ user, signOut, fetchedUserNickname }) => {
 	return (
 		<div className="navbar bg-primary text-primary-content justify-center">
 			<div className="">
@@ -25,7 +20,7 @@ const Navbar = () => {
 			<div>
 				<ul className="menu menu-horizontal px-1">
 					<li>
-						<Link to="/rooms">Chat Rooms (to be changed to dms shortly)</Link>
+						<Link to="/rooms">Chat Rooms (to be changed to DMs shortly)</Link>
 					</li>
 
 					{user && (
@@ -36,7 +31,7 @@ const Navbar = () => {
 				</ul>
 			</div>
 		</div>
-	)
+	);
 }
 
-export default Navbar
+export default Navbar;
