@@ -167,7 +167,7 @@ const MessagePage = () => {
 								)}
 							>
 								<div className="chat-header">
-									{userNickname}
+									{msg.userNickname}
 									<time className="text-xs opacity-50">
 										{' '}
 										{formatTime(msg.createdAt)}
