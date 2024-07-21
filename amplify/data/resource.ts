@@ -54,7 +54,7 @@ const schema = a.schema({
 export type Schema = ClientSchema<typeof schema>
 
 export const data = defineData({
-	name: 'LTM-R-chat',
+	name: 'luke-chat',
 	schema,
 	authorizationModes: {
 		defaultAuthorizationMode: 'userPool',
