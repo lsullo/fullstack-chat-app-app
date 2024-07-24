@@ -23,6 +23,11 @@ const schema = a.schema({
 			allow.owner().to(['read', 'create']),
 			allow.authenticated().to(['read']),
 		]),
+	RoomUserTable: a
+		.model({
+			userID: a.string(),
+			role: a.string()
+		})
 	
 })
 
