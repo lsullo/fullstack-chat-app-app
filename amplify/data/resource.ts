@@ -28,6 +28,10 @@ const schema = a.schema({
 			userID: a.string(),
 			role: a.string()
 		})
+		.authorization((allow) => [
+			allow.owner().to(['read', 'create']),
+			allow.authenticated().to(['read']),
+		])
 	
 })
 
