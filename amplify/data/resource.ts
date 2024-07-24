@@ -4,6 +4,7 @@ const schema = a.schema({
 	Room: a
 		.model({
 			name: a.string().required(),
+			participants: a.string().required(),
 			urlName: a.string().required(),
 			messages: a.hasMany('Message', 'roomId'),
 		})
