@@ -13,14 +13,12 @@ const client = generateClient<Schema>()
 function formatTime(dateString: string): string {
 	const date = new Date(dateString)
 
-	// Create an Intl.DateTimeFormat object with the desired options
 	const formatter = new Intl.DateTimeFormat('en-US', {
 		hour: 'numeric',
 		minute: 'numeric',
-		hour12: true, // Use 24-hour format. Set to true if you want 12-hour format with AM/PM.
+		hour12: true,
 	})
 
-	// Format the date object
 	const formattedTime = formatter.format(date)
 
 	return formattedTime
@@ -35,6 +33,7 @@ const MessagePage = () => {
 	const [roomDetails, setRoomDetails] = useState<{
 		roomId: string
 		name: string
+		conversationId: string
 	}>()
 	const [msgText, setMsgText] = useState('')
 	const [msgFile, setMsgFile] = useState<File | null>(null)
@@ -43,9 +42,7 @@ const MessagePage = () => {
 	useEffect(() => {
 		const sub = client.models.Message.onCreate().subscribe({
 			next: (data) => {
-				//update the state if its not my message
-				data.owner !== user.username &&
-					setMsgs((prev) => [...prev, { ...data }])
+				data.owner !== user.username && setMsgs((prev) => [...prev, { ...data }])
 			},
 			error: (error) => console.warn(error),
 		})
@@ -58,19 +55,18 @@ const MessagePage = () => {
 		client.models.Room.listRoomByUrlName(
 			{ urlName: roomName },
 			{
-				selectionSet: ['id', 'name', 'messages.*'],
+				selectionSet: ['id', 'name', 'conversationId', 'messages.*'],
 			}
 		).then(({ data }) => {
 			console.log('the data', data)
-			//sort messages by 'createdAt' field
 			data[0].messages.sort(
-				(a, b) =>
-					new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+				(a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
 			)
 			setMsgs(data[0].messages as Schema['Message']['type'][])
 			setRoomDetails({
 				roomId: data[0].id,
 				name: data[0].name,
+				conversationId: data[0].conversationId!,
 			})
 		})
 	}, [roomName])
@@ -85,21 +81,20 @@ const MessagePage = () => {
 	const handleSubmit = async (e: FormEvent) => {
 		e.preventDefault()
 
-		if (msgText) {
+		if (msgText && roomDetails?.conversationId) {
 			const { data: newMessage } = await client.models.Message.create({
 				roomId: roomDetails?.roomId as string,
+				conversationId: roomDetails?.conversationId as string,
 				type: 'text',
 				content: msgText,
 				userNickname,
 			})
-			setMsgs(
-				(prev) => [...prev, { ...newMessage }] as Schema['Message']['type'][]
-			)
+			setMsgs((prev) => [...prev, { ...newMessage }] as Schema['Message']['type'][])
 			setMsgText('')
 			console.log('nothing', newMessage)
 		}
 
-		if (msgFile) {
+		if (msgFile && roomDetails?.conversationId) {
 			const uploadedItem = await uploadData({
 				data: msgFile,
 				path: `chat-pics/${msgFile.name}`,
@@ -108,20 +103,20 @@ const MessagePage = () => {
 			console.log('the uploaded item', uploadedItem)
 			const { data: newMessage } = await client.models.Message.create({
 				roomId: roomDetails?.roomId as string,
+				conversationId: roomDetails?.conversationId as string,
 				type: 'image',
 				picId: uploadedItem.path,
 				userNickname,
 			})
 
-			setMsgs(
-				(prev) => [...prev, { ...newMessage }] as Schema['Message']['type'][]
-			)
+			setMsgs((prev) => [...prev, { ...newMessage }] as Schema['Message']['type'][])
 			setMsgFile(null)
 			if (fileInputRef.current) {
 				fileInputRef.current.value = ''
 			}
 		}
 	}
+
 	return (
 		<div className="flex flex-col h-screen">
 			<div className="flex-1 overflow-y-auto p-6 space-y-4">
@@ -164,8 +159,8 @@ const MessagePage = () => {
 								className={clsx(
 									'chat max-w-xl w-1/3',
 									msg.owner !== user.username ? 'chat-start' : 'chat-end'
-								)}
-							>
+									)}
+								>
 								<div className="chat-header">
 									{msg.userNickname}
 									<time className="text-xs opacity-50">
