@@ -13,7 +13,7 @@ const Hero = () => {
 					<Link to="/rooms" className="btn btn-primary">
 						Public Chats
 					</Link><Link to="/groups" className="btn btn-primary" style={{ marginLeft: '10px' }}>
-						Private Chats
+						Group Chats
 					</Link>
 					
 				</div>
