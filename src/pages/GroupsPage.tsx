@@ -1,67 +1,69 @@
-import { useEffect, useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Schema } from '../../amplify/data/resource';
-import { generateClient } from 'aws-amplify/api';
+import { useEffect, useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { Schema } from '../../amplify/data/resource'
+import { generateClient } from 'aws-amplify/api'
 
-const client = generateClient<Schema>();
+const client = generateClient<Schema>()
 
 const GroupsPage = () => {
-  const [rooms, setRooms] = useState<Schema['Room']['type'][]>([]);
-  const [roomName, setRoomName] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [searchResults, setSearchResults] = useState<string[]>([]);
-  const navigate = useNavigate();
+  const [rooms, setRooms] = useState<Schema['Room']['type'][]>([])
+  const [roomName, setRoomName] = useState('')
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([])
+  const [searchResults, setSearchResults] = useState<string[]>([])
+  const navigate = useNavigate()
 
   useEffect(() => {
-    client.models.Room.list().then((rooms) => {
-      setRooms(rooms.data);
-    });
-  }, []);
+    const fetchRooms = async () => {
+      try {
+        const { data } = await client.models.Room.list()
+        setRooms(data)
+      } catch (error) {
+        console.error('Error fetching rooms:', error)
+      }
+    }
+    fetchRooms()
+  }, [])
 
   const handleCreateRoomSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault();
-    const urlName = roomName.toLowerCase().replace(/\s/g, '-');
-    const { data: createdRoom } = await client.models.Room.create({
-      name: roomName,
-      urlName,
-      participants: selectedUsers.join(','),
-    });
-    setRoomName('');
-    setSelectedUsers([]);
-
-    setRooms([...rooms, createdRoom] as Schema['Room']['type'][]);
-    navigate(`/rooms/${urlName}`);
-  };
-
-  const handleSearchChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value);
-
-    if (e.target.value.trim() === '') {
-      setSearchResults([]);
-      return;
-    }
-
+    e.preventDefault()
+    const urlName = roomName.toLowerCase().replace(/\s/g, '-')
     try {
-      const response = await fetch(`/api/search-users?query=${e.target.value}`);
-      const results = await response.json();
-      setSearchResults(results);
+      const { data: createdRoom } = await client.models.Room.create({
+        name: roomName,
+        urlName,
+        participants: selectedUsers.join(','),
+      })
+      setRoomName('')
+      setSelectedUsers([])
+      setRooms([...rooms, createdRoom] as Schema['Room']['type'][])
+      navigate(`/rooms/${urlName}`)
     } catch (error) {
-      console.error('Error searching users:', error);
+      console.error('Error creating room:', error)
     }
-  };
+  }
+
+  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchTerm(e.target.value)
+    // Mock search result, replace with actual user search logic
+    const mockUsers = ['luke', 'john', 'jane', 'doe', 'dababy']
+    const results = mockUsers.filter((user) =>
+      user.toLowerCase().includes(e.target.value.toLowerCase())
+    )
+    setSearchResults(results)
+  }
 
   const handleAddUser = (user: string) => {
     if (!selectedUsers.includes(user)) {
-      setSelectedUsers([...selectedUsers, user]);
+      setSelectedUsers([...selectedUsers, user])
     }
-    setSearchTerm('');
-    setSearchResults([]);
-  };
+    setSearchTerm('')
+    setSearchResults([])
+  }
 
   const handleRemoveUser = (user: string) => {
-    setSelectedUsers(selectedUsers.filter((u) => u !== user));
-  };
+    setSelectedUsers(selectedUsers.filter((u) => u !== user))
+  }
 
   return (
     <>
@@ -135,7 +137,7 @@ const GroupsPage = () => {
         ))}
       </section>
     </>
-  );
-};
+  )
+}
 
-export default GroupsPage;
+export default GroupsPage
