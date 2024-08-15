@@ -7,7 +7,6 @@ const schema = a.schema({
             participants: a.string(),
             urlName: a.string().required(),
             messages: a.hasMany('Message', 'roomId'),
-            isPrivate: a.boolean().default(false), // Add isPrivate field
         })
         .secondaryIndexes((index) => [index('urlName')])
         .authorization((allow) => [allow.authenticated().to(['create', 'read'])]),
@@ -31,6 +30,45 @@ const schema = a.schema({
         })
         .authorization((allow) => [
             allow.owner().to(['read', 'create']),
+            allow.authenticated().to(['read']),
+        ]),
+
+    GroupChat: a
+        .model({
+            name: a.string().required(),
+            adminId: a.id().required(),  // The user who created the group chat
+            participants: a.hasMany('GroupChatUser', 'groupId'),
+            messages: a.hasMany('GroupMessage', 'groupId'),
+            isPrivate: a.boolean().default(false),
+        })
+        .authorization((allow) => [
+            allow.owner().to(['read', 'create', 'update']),
+            allow.authenticated().to(['read']),
+        ]),
+    GroupMessage: a
+        .model({
+            groupId: a.id().required(),
+            senderId: a.id().required(),
+            content: a.string().required(),
+            timestamp: a.timestamp().required(),
+            sender: a.belongsTo('User', 'senderId'),
+            group: a.belongsTo('GroupChat', 'groupId'),
+            isRead: a.boolean().default(false),
+        })
+        .authorization((allow) => [
+            allow.owner().to(['read', 'create']),
+            allow.authenticated().to(['read']),
+        ]),
+    GroupChatUser: a
+        .model({
+            groupId: a.id().required(),
+            userId: a.id().required(),
+            role: a.enum(['admin', 'member']),  // No .default() here
+            user: a.belongsTo('User', 'userId'),
+            group: a.belongsTo('GroupChat', 'groupId'),
+        })
+        .authorization((allow) => [
+            allow.owner().to(['read', 'create', 'delete']),
             allow.authenticated().to(['read']),
         ])
 })
