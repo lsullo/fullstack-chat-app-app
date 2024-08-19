@@ -1,6 +1,20 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend'
 
 const schema = a.schema({
+
+    User: a
+        .model({
+            id: a.id().required(),
+            username: a.string().required(),
+            email: a.string(),
+            profilePicture: a.string(),
+            messages: a.hasMany('GroupMessage', 'senderId'),
+            groups: a.hasMany('GroupChatUser', 'userId'),
+        })
+        .authorization((allow) => [
+            allow.authenticated().to(['read', 'create', 'update']),
+        ]),
+
     Room: a
         .model({
             name: a.string().required(),
@@ -10,6 +24,7 @@ const schema = a.schema({
         })
         .secondaryIndexes((index) => [index('urlName')])
         .authorization((allow) => [allow.authenticated().to(['create', 'read'])]),
+
     Message: a
         .model({
             roomId: a.id().required(),
@@ -23,6 +38,7 @@ const schema = a.schema({
             allow.owner().to(['read', 'create']),
             allow.authenticated().to(['read']),
         ]),
+
     RoomUserTable: a
         .model({
             userID: a.string(),
@@ -45,6 +61,7 @@ const schema = a.schema({
             allow.owner().to(['read', 'create', 'update']),
             allow.authenticated().to(['read']),
         ]),
+
     GroupMessage: a
         .model({
             groupId: a.id().required(),
@@ -59,6 +76,7 @@ const schema = a.schema({
             allow.owner().to(['read', 'create']),
             allow.authenticated().to(['read']),
         ]),
+
     GroupChatUser: a
         .model({
             groupId: a.id().required(),
