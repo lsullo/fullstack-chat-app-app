@@ -39,23 +39,16 @@ const schema = a.schema({
             allow.authenticated().to(['read']),
         ]),
 
-    RoomUserTable: a
-        .model({
-            userID: a.string(),
-            role: a.string()
-        })
-        .authorization((allow) => [
-            allow.owner().to(['read', 'create']),
-            allow.authenticated().to(['read']),
-        ]),
 
     GroupChat: a
         .model({
             name: a.string().required(),
             adminId: a.id().required(),  // The user who created the group chat
-            participants: a.hasMany('GroupChatUser', 'groupId'),
+            members: a.hasMany('GroupChatUser', 'groupId'),
             messages: a.hasMany('GroupMessage', 'groupId'),
             isPrivate: a.boolean().default(false),
+            urlName: a.string().required(),
+             
         })
         .authorization((allow) => [
             allow.owner().to(['read', 'create', 'update']),

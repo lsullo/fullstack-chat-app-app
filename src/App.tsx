@@ -6,6 +6,8 @@ import HomePage from './pages/HomePage'
 import RoomsPage from './pages/RoomsPage'
 import MessagePage from './pages/MessagePage'
 import GroupsPage from './pages/GroupsPage'
+import PrivateMessagePage from './pages/PrivateMessagePage';
+
 
 const router = createBrowserRouter([
   {
@@ -20,7 +22,20 @@ const router = createBrowserRouter([
         children: [
           {
             path: 'groups',
-            element: <GroupsPage />,
+            children: [
+              {
+                path: '',
+                element: <GroupsPage />,
+              },
+              {
+                path: ':groupName',
+                element: <PrivateMessagePage />,
+              },
+              {
+                path: 'create',
+                element: <GroupsPage />, // Assuming you have a component for creating rooms
+              },
+            ],
           },
           {
             path: 'rooms',

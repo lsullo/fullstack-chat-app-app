@@ -4,140 +4,71 @@ import { Schema } from '../../amplify/data/resource'
 import { generateClient } from 'aws-amplify/api'
 
 const client = generateClient<Schema>()
-
 const GroupsPage = () => {
-  const [rooms, setRooms] = useState<Schema['Room']['type'][]>([])
-  const [roomName, setRoomName] = useState('')
-  const [searchTerm, setSearchTerm] = useState('')
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([])
-  const [searchResults, setSearchResults] = useState<string[]>([])
-  const navigate = useNavigate()
+	const [rooms, setRooms] = useState<Schema['Room']['type'][]>([])
+	const [groupName, setRoomName] = useState('')
+	const navigate = useNavigate()
+	useEffect(() => {
+		client.models.Room.list().then((rooms) => {
+			setRooms(rooms.data)
+		})
+	}, [])
 
-  useEffect(() => {
-    const fetchRooms = async () => {
-      try {
-        const { data } = await client.models.Room.list()
-        setRooms(data)
-      } catch (error) {
-        console.error('Error fetching rooms:', error)
-      }
-    }
-    fetchRooms()
-  }, [])
+	const handleCreateRoomSubmit = async (
+		e: React.FormEvent<HTMLFormElement>
+	) => {
+		e.preventDefault()
+		const urlName = groupName.toLowerCase().replace(/\s/g, '-')
+		const { data: createdRoom } = await client.models.Room.create({
+			name: groupName,
+			urlName,
+		})
+		setRoomName('')
 
-  const handleCreateRoomSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
-    e.preventDefault()
-    const urlName = roomName.toLowerCase().replace(/\s/g, '-')
-    try {
-      const { data: createdRoom } = await client.models.Room.create({
-        name: roomName,
-        urlName,
-        participants: selectedUsers.join(','),
-      })
-      setRoomName('')
-      setSelectedUsers([])
-      setRooms([...rooms, createdRoom] as Schema['Room']['type'][])
-      navigate(`/rooms/${urlName}`)
-    } catch (error) {
-      console.error('Error creating room:', error)
-    }
-  }
-
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchTerm(e.target.value)
-    // Mock search result, replace with actual user search logic
-    const mockUsers = ['luke', 'john', 'jane', 'doe', 'dababy']
-    const results = mockUsers.filter((user) =>
-      user.toLowerCase().includes(e.target.value.toLowerCase())
-    )
-    setSearchResults(results)
-  }
-
-  const handleAddUser = (user: string) => {
-    if (!selectedUsers.includes(user)) {
-      setSelectedUsers([...selectedUsers, user])
-    }
-    setSearchTerm('')
-    setSearchResults([])
-  }
-
-  const handleRemoveUser = (user: string) => {
-    setSelectedUsers(selectedUsers.filter((u) => u !== user))
-  }
-
-  return (
-    <>
-      <h1 className="text-3xl text-center mt-12">Group Chat Rooms</h1>
-      <div className="my-8 w-full">
-        <div className="flex flex-col items-center">
-          <form onSubmit={handleCreateRoomSubmit}>
-            <input
-              className="input input-md input-primary mr-2"
-              placeholder="Group Room Name"
-              value={roomName}
-              required
-              onChange={(e) => setRoomName(e.target.value)}
-            />
-            <div className="relative">
-              <input
-                className="input input-md input-primary mr-2"
-                placeholder="Search Users"
-                value={searchTerm}
-                onChange={handleSearchChange}
-              />
-              {searchResults.length > 0 && (
-                <ul className="absolute bg-white border mt-1 w-full z-10">
-                  {searchResults.map((result) => (
-                    <li
-                      key={result}
-                      className="p-2 cursor-pointer hover:bg-gray-200"
-                      onClick={() => handleAddUser(result)}
-                    >
-                      {result}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-            <div className="flex flex-wrap mt-2">
-              {selectedUsers.map((user) => (
-                <div key={user} className="bg-gray-200 p-2 rounded flex items-center m-1">
-                  {user}
-                  <button
-                    type="button"
-                    className="ml-2 text-red-500"
-                    onClick={() => handleRemoveUser(user)}
-                  >
-                    &times;
-                  </button>
-                </div>
-              ))}
-            </div>
-            <button type="submit" className="btn btn-secondary mt-2">
-              Create Room
-            </button>
-          </form>
-        </div>
-      </div>
-      <section>
-        {rooms.map((room) => (
-          <article
-            key={room.id}
-            className="bg-accent rounded flex flex-col max-w-screen-md mx-auto p-4"
-          >
-            <Link
-              className="text-2xl text-primary-content"
-              to={`/rooms/${room.urlName}`}
-            >
-              <div className="h-24 flex justify-center items-center">
-                {room.name}
-              </div>
-            </Link>
-          </article>
-        ))}
-      </section>
-    </>
-  )
+		setRooms([...rooms, createdRoom] as Schema['Room']['type'][])
+		navigate(`/rooms/${urlName}`)
+	}
+	return (
+		<>
+			<h1 className="text-3xl text-center mt-12">Group Chat Rooms</h1>
+			<div className="my-8 w-full">
+				<div className="flex flex-col items-center">
+					<form onSubmit={handleCreateRoomSubmit}>
+						<input
+							className="input input-md input-primary mr-2"
+							placeholder="my cool group name"
+							value={groupName}
+							required
+							onChange={(e) => {
+								setRoomName(e.target.value)
+							}}
+						/>
+						<button type="submit" className="btn btn-secondary">
+							{' '}
+							Create Group
+						</button>
+					</form>
+				</div>
+			</div>
+			<section>
+				{rooms.map((room) => (
+					<article
+						key={room.id}
+						className="bg-accent rounded flex flex-col max-w-screen-md mx-auto p-4"
+					>
+						<Link
+							className="text-2xl text-primary-content"
+							to={`/rooms/${room.urlName}`}
+						>
+							<div className="h-24 flex justify-center items-center">
+								{room.name}
+							</div>
+						</Link>
+					</article>
+				))}
+			</section>
+		</>
+	)
 }
 
 export default GroupsPage
