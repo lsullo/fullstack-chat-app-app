@@ -40,8 +40,8 @@ const PrivateMessagePage = () => {
 
 
    const [roomDetails, setRoomDetails] = useState<{
-       roomId: string
-       name: string
+       groupId: string
+       groupname: string
    }>()
    const [msgText, setMsgText] = useState('')
    const [msgFile, setMsgFile] = useState<File | null>(null)
@@ -78,8 +78,8 @@ const PrivateMessagePage = () => {
            )
            setMsgs(data[0].messages as Schema['Message']['type'][])
            setRoomDetails({
-               roomId: data[0].id,
-               name: data[0].name,
+               groupId: data[0].id,
+               groupname: data[0].name,
            })
        })
    }, [groupName])
@@ -98,8 +98,8 @@ const PrivateMessagePage = () => {
 
 
        if (msgText) {
-           const { data: newMessage } = await client.models.Message.create({
-               roomId: roomDetails?.roomId as string,
+           const { data: newMessage } = await client.models.GroupMessage.create({
+               groupId: roomDetails?.groupId as string,
                type: 'text',
                content: msgText,
                userNickname,
@@ -121,7 +121,7 @@ const PrivateMessagePage = () => {
 
            console.log('the uploaded item', uploadedItem)
            const { data: newMessage } = await client.models.Message.create({
-               roomId: roomDetails?.roomId as string,
+               roomId: roomDetails?.groupId as string,
                type: 'image',
                picId: uploadedItem.path,
                userNickname,

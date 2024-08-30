@@ -33,7 +33,7 @@ const GroupsPage = () => {
     e.preventDefault();
     const urlName = groupName.toLowerCase().replace(/\s/g, '-');
     const { data: createdGroup } = await client.models.GroupChat.create({
-      name: groupName,
+      groupname: groupName,
       urlName,
       adminId: fetchedUserNickname,
     });
@@ -77,7 +77,7 @@ const GroupsPage = () => {
               to={`/groups/${group.urlName}`}
             >
               <div className="h-24 flex justify-center items-center">
-                {group.name}
+                {group.groupname}
               </div>
             </Link>
           </article>

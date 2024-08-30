@@ -42,7 +42,7 @@ const schema = a.schema({
 
     GroupChat: a
         .model({
-            name: a.string().required(),
+            groupname: a.string().required(),
             adminId: a.id().required(),  // The user who created the group chat
             members: a.hasMany('GroupChatUser', 'groupId'),
             messages: a.hasMany('GroupMessage', 'groupId'),
@@ -57,11 +57,13 @@ const schema = a.schema({
 
     GroupMessage: a
         .model({
+            type: a.enum(['text', 'image']),
             groupId: a.id().required(),
-            senderId: a.id().required(),
+            //senderId: a.id().required(),
             content: a.string().required(),
-            timestamp: a.timestamp().required(),
+            //timestamp: a.timestamp().required(),
             sender: a.belongsTo('User', 'senderId'),
+            userNickname: a.string().required(),
             group: a.belongsTo('GroupChat', 'groupId'),
             isRead: a.boolean().default(false),
         })
