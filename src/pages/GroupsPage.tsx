@@ -31,17 +31,17 @@ const GroupsPage = () => {
 
   const handleCreateGroupSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const urlName = groupName.toLowerCase().replace(/\s/g, '-');
+    const groupUrlName = groupName.toLowerCase().replace(/\s/g, '-');
     const { data: createdGroup } = await client.models.GroupChat.create({
       groupname: groupName,
-      urlName,
+      groupUrlName,
       adminId: fetchedUserNickname,
     });
     setGroupName('');
 
     setGroups([...groups, createdGroup] as Schema['GroupChat']['type'][]);
-    if (createdGroup && 'urlName' in createdGroup) {
-      navigate(`/groups/${createdGroup.urlName}`);
+    if (createdGroup && 'groupUrlName' in createdGroup) {
+      navigate(`/groups/${createdGroup.groupUrlName}`);
     }
   };
 
@@ -74,7 +74,7 @@ const GroupsPage = () => {
           >
             <Link
               className="text-2xl text-primary-content"
-              to={`/groups/${group.urlName}`}
+              to={`/groups/${group.groupUrlName}`}
             >
               <div className="h-24 flex justify-center items-center">
                 {group.groupname}

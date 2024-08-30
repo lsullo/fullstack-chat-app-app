@@ -47,7 +47,7 @@ const schema = a.schema({
             members: a.hasMany('GroupChatUser', 'groupId'),
             messages: a.hasMany('GroupMessage', 'groupId'),
             isPrivate: a.boolean().default(false),
-            urlName: a.string().required(),
+            groupUrlName: a.string().required(),
              
         })
         .authorization((allow) => [
