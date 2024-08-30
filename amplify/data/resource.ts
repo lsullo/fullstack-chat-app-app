@@ -8,7 +8,7 @@ const schema = a.schema({
             username: a.string().required(),
             email: a.string(),
             profilePicture: a.string(),
-            messages: a.hasMany('GroupMessage', 'senderId'),
+            //messages: a.hasMany('GroupMessage', 'senderId'),
             groups: a.hasMany('GroupChatUser', 'userId'),
         })
         .authorization((allow) => [
