@@ -62,7 +62,7 @@ const schema = a.schema({
             //senderId: a.id().required(),
             content: a.string().required(),
             //timestamp: a.timestamp().required(),
-            sender: a.belongsTo('User', 'senderId'),
+            //sender: a.belongsTo('User', 'senderId'),
             userNickname: a.string().required(),
             group: a.belongsTo('GroupChat', 'groupId'),
             isRead: a.boolean().default(false),
