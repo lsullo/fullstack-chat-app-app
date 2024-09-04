@@ -39,17 +39,17 @@ const PrivateMessagePage = () => {
    const fileInputRef = useRef<HTMLInputElement | null>(null)
 
 
-   const [roomDetails, setRoomDetails] = useState<{
+   const [groupDetails, setGroupDetails] = useState<{
        groupId: string
        groupname: string
    }>()
    const [msgText, setMsgText] = useState('')
    const [msgFile, setMsgFile] = useState<File | null>(null)
-   const [msgs, setMsgs] = useState<Schema['Message']['type'][]>([])
+   const [msgs, setMsgs] = useState<Schema['GroupMessage']['type'][]>([])
 
 
    useEffect(() => {
-       const sub = client.models.Message.onCreate().subscribe({
+       const sub = client.models.GroupMessage.onCreate().subscribe({
            next: (data) => {
                //update the state if its not my message
                data.owner !== user.username &&
@@ -63,11 +63,11 @@ const PrivateMessagePage = () => {
 
    useEffect(() => {
        if (!groupName) return
-       console.log('the room url name', groupName)
-       client.models.Room.listRoomByUrlName(
+       console.log('the group url name', groupName)
+       client.models.Group.listGroupByUrlName(
            { urlName: groupName },
            {
-               selectionSet: ['id', 'name', 'messages.*'],
+               selectionSet: ['id', 'groupname', 'messages.*'],
            }
        ).then(({ data }) => {
            console.log('the data', data)
@@ -76,8 +76,8 @@ const PrivateMessagePage = () => {
                (a, b) =>
                    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
            )
-           setMsgs(data[0].messages as Schema['Message']['type'][])
-           setRoomDetails({
+           setMsgs(data[0].messages as Schema['GroupMessage']['type'][])
+           setGroupDetails({
                groupId: data[0].id,
                groupname: data[0].name,
            })
@@ -99,13 +99,13 @@ const PrivateMessagePage = () => {
 
        if (msgText) {
            const { data: newMessage } = await client.models.GroupMessage.create({
-               groupId: roomDetails?.groupId as string,
+               groupId: groupDetails?.groupId as string,
                type: 'text',
                content: msgText,
                userNickname,
            })
            setMsgs(
-               (prev) => [...prev, { ...newMessage }] as Schema['Message']['type'][]
+               (prev) => [...prev, { ...newMessage }] as Schema['GroupMessage']['type'][]
            )
            setMsgText('')
            console.log('nothing', newMessage)
@@ -120,8 +120,8 @@ const PrivateMessagePage = () => {
 
 
            console.log('the uploaded item', uploadedItem)
-           const { data: newMessage } = await client.models.Message.create({
-               roomId: roomDetails?.groupId as string,
+           const { data: newMessage } = await client.models.GroupMessage.create({
+               groupId: groupDetails?.groupId as string,
                type: 'image',
                picId: uploadedItem.path,
                userNickname,
@@ -129,7 +129,7 @@ const PrivateMessagePage = () => {
 
 
            setMsgs(
-               (prev) => [...prev, { ...newMessage }] as Schema['Message']['type'][]
+               (prev) => [...prev, { ...newMessage }] as Schema['GroupMessage']['type'][]
            )
            setMsgFile(null)
            if (fileInputRef.current) {

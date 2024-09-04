@@ -7,41 +7,57 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 
 const GroupsPage = () => {
   const { user } = useAuthenticator((context) => [context.user]);
-  const [fetchedUserNickname, setFetchedUserNickname] = useState<string>('');
+  const [fetchedUserId, setFetchedUserId] = useState<string>('');
   const [groups, setGroups] = useState<Schema['GroupChat']['type'][]>([]);
   const [groupName, setGroupName] = useState('');
   const navigate = useNavigate();
   const client = generateClient<Schema>();
 
+
+  useEffect(() => {
+    if (client.models && client.models.GroupChat) {
+      client.models.GroupChat.list().then((groupsResponse) => {
+        setGroups(groupsResponse.data);
+      });
+    } else {
+      console.error('Error accessing GroupChat model');
+    }
+  }, []);
+
   useEffect(() => {
     if (user) {
       fetchAuthSession().then((session) => {
-        setFetchedUserNickname(session.tokens?.idToken?.payload.nickname as string);
+        setFetchedUserId(session.tokens?.idToken?.payload.sub as string);
       });
     } else {
-      setFetchedUserNickname('');
+      setFetchedUserId('');
     }
   }, [user]);
 
   useEffect(() => {
-    client.models.GroupChat.list().then((groups) => {
-      setGroups(groups.data);
+    client.models.GroupChat.list().then((groupsResponse) => {
+      setGroups(groupsResponse.data);
     });
   }, []);
 
   const handleCreateGroupSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const groupUrlName = groupName.toLowerCase().replace(/\s/g, '-');
-    const { data: createdGroup } = await client.models.GroupChat.create({
-      groupname: groupName,
-      groupUrlName,
-      adminId: fetchedUserNickname,
-    });
-    setGroupName('');
-
-    setGroups([...groups, createdGroup] as Schema['GroupChat']['type'][]);
-    if (createdGroup && 'groupUrlName' in createdGroup) {
-      navigate(`/groups/${createdGroup.groupUrlName}`);
+    try {
+      const { data: createdGroup } = await client.models.GroupChat.create({
+        groupname: groupName,
+        groupUrlName,
+        adminId: fetchedUserId,
+      });
+      if (createdGroup) {
+        setGroupName('');
+        setGroups([...groups, createdGroup] as Schema['GroupChat']['type'][]);
+        navigate(`/groups/${createdGroup.groupUrlName}`);
+      } else {
+        console.error('Error creating group:', createdGroup);
+      }
+    } catch (error) {
+      console.error('Error creating group:', error);
     }
   };
 

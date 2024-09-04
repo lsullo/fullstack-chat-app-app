@@ -57,14 +57,15 @@ const schema = a.schema({
 
     GroupMessage: a
         .model({
-            type: a.enum(['text', 'image']),
             groupId: a.id().required(),
-            //senderId: a.id().required(),
+            type: a.enum(['text', 'image']),
             content: a.string().required(),
+            picId: a.string(),
+            group: a.belongsTo('Group', 'groupId'),
+            userNickname: a.string().required(),
+            //senderId: a.id().required(),
             //timestamp: a.timestamp().required(),
             //sender: a.belongsTo('User', 'senderId'),
-            userNickname: a.string().required(),
-            group: a.belongsTo('GroupChat', 'groupId'),
             isRead: a.boolean().default(false),
         })
         .authorization((allow) => [
