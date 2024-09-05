@@ -39,7 +39,7 @@ const PrivateMessagePage = () => {
    const fileInputRef = useRef<HTMLInputElement | null>(null)
 
 
-   const [groupDetails, setGroupDetails] = useState<{
+   const [groupDetails, setGroupChatDetails] = useState<{
        groupId: string
        groupname: string
    }>()
@@ -64,7 +64,7 @@ const PrivateMessagePage = () => {
    useEffect(() => {
        if (!groupName) return
        console.log('the group url name', groupName)
-       client.models.Group.listGroupByUrlName(
+       client.models.GroupChat.listGroupByUrlName(
            { urlName: groupName },
            {
                selectionSet: ['id', 'groupname', 'messages.*'],
@@ -77,7 +77,7 @@ const PrivateMessagePage = () => {
                    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
            )
            setMsgs(data[0].messages as Schema['GroupMessage']['type'][])
-           setGroupDetails({
+           setGroupChatDetails({
                groupId: data[0].id,
                groupname: data[0].name,
            })
