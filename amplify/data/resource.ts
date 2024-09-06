@@ -61,7 +61,7 @@ const schema = a.schema({
             type: a.enum(['text', 'image']),
             content: a.string().required(),
             picId: a.string(),
-            group: a.belongsTo('Group', 'groupId'),
+            group: a.belongsTo('GroupChat', 'groupId'),
             userNickname: a.string().required(),
             //senderId: a.id().required(),
             //timestamp: a.timestamp().required(),
