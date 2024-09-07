@@ -43,7 +43,7 @@ const schema = a.schema({
         .model({
             groupname: a.string().required(),
             groupUrlName: a.string().required(),
-            messages: a.hasMany('GroupMessage', 'groupId'),
+            gmessages: a.hasMany('GroupMessage', 'groupId'),
             adminId: a.id().required(),  // The user who created the group chat
             //members: a.hasMany('GroupChatUser', 'groupId'),
             //isPrivate: a.boolean().default(false),
@@ -59,7 +59,7 @@ const schema = a.schema({
             type: a.enum(['text', 'image']),
             content: a.string().required(),
             picId: a.string(),
-            group: a.belongsTo('GroupChat', 'groupId'),
+            group: a.belongsTo('Group', 'groupId'),
             userNickname: a.string().required(),
             //senderId: a.id().required(),
             //timestamp: a.timestamp().required(),
@@ -71,13 +71,13 @@ const schema = a.schema({
             allow.authenticated().to(['read']),
         ]),
 
-    GroupChatUser: a
+    GroupUser: a
         .model({
-            groupId: a.id().required(),
+            //groupId: a.id().required(),
             userId: a.id().required(),
             role: a.enum(['admin', 'member']),  // No .default() here
             user: a.belongsTo('User', 'userId'),
-            group: a.belongsTo('GroupChat', 'groupId'),
+            group: a.belongsTo('Group', 'groupId'),
         })
         .authorization((allow) => [
             allow.owner().to(['read', 'create', 'delete']),
