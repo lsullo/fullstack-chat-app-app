@@ -8,7 +8,7 @@ const schema = a.schema({
             username: a.string().required(),
             email: a.string(),
             profilePicture: a.string(),
-            groups: a.hasMany('GroupUser', 'userId'),
+            //groups: a.hasMany('GroupUser', 'userId'),
         })
         .authorization((allow) => [
             allow.authenticated().to(['read', 'create', 'update']),
