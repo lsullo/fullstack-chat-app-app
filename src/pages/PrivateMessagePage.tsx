@@ -64,7 +64,7 @@ const PrivateMessagePage = () => {
    useEffect(() => {
        if (!groupName) return
        console.log('the group url name', groupName)
-       client.models.GroupChat.listGroupByUrlName(
+       client.models.Group.listGroupByUrlName(
            { urlName: groupName },
            {
                selectionSet: ['id', 'groupname', 'messages.*'],

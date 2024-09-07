@@ -8,8 +8,7 @@ const schema = a.schema({
             username: a.string().required(),
             email: a.string(),
             profilePicture: a.string(),
-            //messages: a.hasMany('GroupMessage', 'senderId'),
-            groups: a.hasMany('GroupChatUser', 'userId'),
+            //groups: a.hasMany('GroupChatUser', 'userId'),
         })
         .authorization((allow) => [
             allow.authenticated().to(['read', 'create', 'update']),
@@ -18,7 +17,7 @@ const schema = a.schema({
     Room: a
         .model({
             name: a.string().required(),
-            participants: a.string(),
+            //participants: a.string(),
             urlName: a.string().required(),
             messages: a.hasMany('Message', 'roomId'),
         })
@@ -40,20 +39,19 @@ const schema = a.schema({
         ]),
 
 
-    GroupChat: a
+    Group: a
         .model({
             groupname: a.string().required(),
-            adminId: a.id().required(),  // The user who created the group chat
-            members: a.hasMany('GroupChatUser', 'groupId'),
-            messages: a.hasMany('GroupMessage', 'groupId'),
-            isPrivate: a.boolean().default(false),
             groupUrlName: a.string().required(),
+            messages: a.hasMany('GroupMessage', 'groupId'),
+            adminId: a.id().required(),  // The user who created the group chat
+            //members: a.hasMany('GroupChatUser', 'groupId'),
+            //isPrivate: a.boolean().default(false),
+            
              
         })
-        .authorization((allow) => [
-            allow.owner().to(['read', 'create', 'update']),
-            allow.authenticated().to(['read']),
-        ]),
+        .secondaryIndexes((index) => [index('groupUrlName')])
+        .authorization((allow) => [allow.authenticated().to(['create', 'read'])]),
 
     GroupMessage: a
         .model({
@@ -66,7 +64,7 @@ const schema = a.schema({
             //senderId: a.id().required(),
             //timestamp: a.timestamp().required(),
             //sender: a.belongsTo('User', 'senderId'),
-            isRead: a.boolean().default(false),
+            //isRead: a.boolean().default(false),
         })
         .authorization((allow) => [
             allow.owner().to(['read', 'create']),
@@ -85,7 +83,10 @@ const schema = a.schema({
             allow.owner().to(['read', 'create', 'delete']),
             allow.authenticated().to(['read']),
         ])
-})
+ })
+ 
+
+
 
 export type Schema = ClientSchema<typeof schema>
 

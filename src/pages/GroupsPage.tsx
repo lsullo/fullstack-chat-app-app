@@ -8,15 +8,15 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 const GroupsPage = () => {
   const { user } = useAuthenticator((context) => [context.user]);
   const [fetchedUserId, setFetchedUserId] = useState<string>('');
-  const [groups, setGroups] = useState<Schema['GroupChat']['type'][]>([]);
+  const [groups, setGroups] = useState<Schema['Group']['type'][]>([]);
   const [groupName, setGroupName] = useState('');
   const navigate = useNavigate();
   const client = generateClient<Schema>();
 
 
   useEffect(() => {
-    if (client.models && client.models.GroupChat) {
-      client.models.GroupChat.list().then((groupsResponse) => {
+    if (client.models && client.models.Group) {
+      client.models.Group.list().then((groupsResponse) => {
         setGroups(groupsResponse.data);
       });
     } else {
@@ -35,7 +35,7 @@ const GroupsPage = () => {
   }, [user]);
 
   useEffect(() => {
-    client.models.GroupChat.list().then((groupsResponse) => {
+    client.models.Group.list().then((groupsResponse) => {
       setGroups(groupsResponse.data);
     });
   }, []);
@@ -44,14 +44,14 @@ const GroupsPage = () => {
     e.preventDefault();
     const groupUrlName = groupName.toLowerCase().replace(/\s/g, '-');
     try {
-      const { data: createdGroup } = await client.models.GroupChat.create({
+      const { data: createdGroup } = await client.models.Group.create({
         groupname: groupName,
         groupUrlName,
         adminId: fetchedUserId,
       });
       if (createdGroup) {
         setGroupName('');
-        setGroups([...groups, createdGroup] as Schema['GroupChat']['type'][]);
+        setGroups([...groups, createdGroup] as Schema['Group']['type'][]);
         navigate(`/groups/${createdGroup.groupUrlName}`);
       } else {
         console.error('Error creating group:', createdGroup);
