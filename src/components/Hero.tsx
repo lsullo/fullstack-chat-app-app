@@ -7,7 +7,7 @@ const Hero = () => {
 				<div className="max-w-md">
 					<h1 className="text-5xl font-bold">Wagwan Bossy</h1>
 					<p className="py-6">
-						I'm a pretty basic hero element. That's ok. We all start somewhere!
+						I'm a pretty poor brokie hero element. That's ok. We all start somewhere!
 						Right now I'm building something amazing ☦️
 					</p>
 					<Link to="/rooms" className="btn btn-primary">
