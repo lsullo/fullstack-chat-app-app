@@ -73,7 +73,7 @@ const schema = a.schema({
 
     GroupUser: a
         .model({
-            //groupId: a.id().required(),
+            groupId: a.id().required(),
             userId: a.id().required(),
             role: a.enum(['admin', 'member']),  // No .default() here
             user: a.belongsTo('User', 'userId'),
