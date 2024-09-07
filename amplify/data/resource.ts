@@ -71,18 +71,18 @@ const schema = a.schema({
             allow.authenticated().to(['read']),
         ]),
 
-    GroupUser: a
-        .model({
-            groupId: a.id().required(),
-            userId: a.id().required(),
-            role: a.enum(['admin', 'member']),  // No .default() here
-            user: a.belongsTo('User', 'userId'),
-            group: a.belongsTo('Group', 'groupId'),
-        })
-        .authorization((allow) => [
-            allow.owner().to(['read', 'create', 'delete']),
-            allow.authenticated().to(['read']),
-        ])
+    //GroupUser: a
+        //.model({
+           // groupId: a.id().required(),
+           // userId: a.id().required(),
+           // role: a.enum(['admin', 'member']),  // No .default() here
+           // user: a.belongsTo('User', 'userId'),
+           // group: a.belongsTo('Group', 'groupId'),
+       // })
+       // .authorization((allow) => [
+       //     allow.owner().to(['read', 'create', 'delete']),
+       //     allow.authenticated().to(['read']),
+       // ])
  })
  
 
