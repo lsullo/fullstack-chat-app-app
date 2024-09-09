@@ -33,6 +33,7 @@ const schema = a.schema({
             groupUrlName: a.string().required(),
             messages: a.hasMany('GroupMessage', 'groupId'),
             adminId: a.id().required(), 
+            members: a.hasMany('User', 'groupId'),
         })
         .secondaryIndexes((index) => [index('groupUrlName')])
         .authorization((allow) => [allow.authenticated().to(['create', 'read'])]),
@@ -57,7 +58,7 @@ const schema = a.schema({
             username: a.string().required(),
             email: a.string(),
             profilepicId: a.string(),
-            joinedgroups: a.hasMany('Group', 'joinedgroupid'),
+            groups: a.belongsTo('Group', 'groupId'),
         })
         .authorization((allow) => [
             allow.authenticated().to(['read', 'create', 'update']),
