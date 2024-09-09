@@ -44,7 +44,8 @@ const schema = a.schema({
             groupname: a.string().required(),
             groupUrlName: a.string().required(),
             gmessages: a.hasMany('GroupMessage', 'groupId'),
-            adminId: a.id().required(),  // The user who created the group chat
+            adminId: a.id().required(),
+            groupuser: a.hasMany('User', 'groupId'),
             //members: a.hasMany('GroupChatUser', 'groupId'),
             //isPrivate: a.boolean().default(false),
             
@@ -91,7 +92,7 @@ const schema = a.schema({
 export type Schema = ClientSchema<typeof schema>
 
 export const data = defineData({
-    name: 'luke-chat',
+    name: 'luke-chat-test1',
     schema,
     authorizationModes: {
         defaultAuthorizationMode: 'userPool',
