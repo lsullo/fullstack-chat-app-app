@@ -33,7 +33,7 @@ const schema = a.schema({
             groupUrlName: a.string().required(),
             messages: a.hasMany('GroupMessage', 'groupId'),
             adminId: a.id().required(), 
-            members: a.hasMany('User', 'groupId'),
+            members: a.belongsTo('User', 'id'),
         })
         .secondaryIndexes((index) => [index('groupUrlName')])
         .authorization((allow) => [allow.authenticated().to(['create', 'read'])]),
@@ -44,7 +44,7 @@ const schema = a.schema({
             type: a.enum(['text', 'image']),
             content: a.string().required(),
             picId: a.string(),
-            group: a.belongsTo('Group', 'groupId'),
+            groupuser: a.belongsTo('User', 'id'),
             userNickname: a.string().required(),
         })
         .authorization((allow) => [
@@ -58,7 +58,7 @@ const schema = a.schema({
             username: a.string().required(),
             email: a.string(),
             profilepicId: a.string(),
-            groups: a.belongsTo('Group', 'groupId'),
+            groups: a.hasMany('Group', 'id'),
         })
         .authorization((allow) => [
             allow.authenticated().to(['read', 'create', 'update']),
