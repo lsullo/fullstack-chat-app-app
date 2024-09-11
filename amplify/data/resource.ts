@@ -28,7 +28,7 @@ const schema = a.schema({
 
     Group: a
         .model({
-            joinedgroupid: a.id().required(),
+            groupId: a.id().required(),
             groupname: a.string().required(),
             groupUrlName: a.string().required(),
             messages: a.hasMany('GroupMessage', 'groupId'),
@@ -44,7 +44,7 @@ const schema = a.schema({
             type: a.enum(['text', 'image']),
             content: a.string().required(),
             picId: a.string(),
-            group: a.belongsTo('Group', 'joinedgroupid'),
+            group: a.belongsTo('Group', 'groupId'),
             userNickname: a.string().required(),
         })
         .authorization((allow) => [
@@ -58,7 +58,7 @@ const schema = a.schema({
             username: a.string().required(),
             email: a.string(),
             profilepicId: a.string(),
-            groups: a.belongsTo('Group', 'joinedgroupid'),
+            groups: a.belongsTo('Group', 'groupId'),
         })
         .authorization((allow) => [
             allow.authenticated().to(['read', 'create', 'update']),
