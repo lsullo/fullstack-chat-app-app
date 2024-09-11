@@ -1,7 +1,6 @@
 import { type ClientSchema, a, defineData } from '@aws-amplify/backend'
 
 const schema = a.schema({
-
     Room: a
         .model({
             name: a.string().required(),
@@ -25,15 +24,14 @@ const schema = a.schema({
             allow.authenticated().to(['read']),
         ]),
 
-
     Group: a
         .model({
             groupId: a.id().required(),
             groupname: a.string().required(),
             groupUrlName: a.string().required(),
             messages: a.hasMany('GroupMessage', 'groupId'),
-            adminId: a.id().required(), 
-            members: a.hasMany('User', 'id'),
+            adminId: a.id().required(),  // Admin of the group
+            members: a.hasMany('GroupUser', 'groupId'),  // Connects to GroupUser for membership
         })
         .secondaryIndexes((index) => [index('groupUrlName')])
         .authorization((allow) => [allow.authenticated().to(['create', 'read'])]),
@@ -58,16 +56,22 @@ const schema = a.schema({
             username: a.string().required(),
             email: a.string(),
             profilepicId: a.string(),
-            groups: a.belongsTo('Group', 'groupId'),
+            groups: a.hasMany('GroupUser', 'userId'),  // Connects to GroupUser for membership
         })
         .authorization((allow) => [
             allow.authenticated().to(['read', 'create', 'update']),
         ]),
 
- })
- 
-
-
+    GroupUser: a
+        .model({
+            groupId: a.id().required(),
+            userId: a.id().required(),
+            role: a.enum(['admin', 'member']),  // Role can be admin or member
+            group: a.belongsTo('Group', 'groupId'),
+            user: a.belongsTo('User', 'userId'),
+        })
+        .authorization((allow) => [allow.authenticated().to(['create', 'read'])]),
+})
 
 export type Schema = ClientSchema<typeof schema>
 
