@@ -12,7 +12,8 @@ const GroupsPage = () => {
   const [groupName, setGroupName] = useState('');
   const navigate = useNavigate();
   const client = generateClient<Schema>();
-
+  const [groupDetails] = useState<{groupId: string}>()
+  
 
   useEffect(() => {
     if (client.models && client.models.Group) {
@@ -45,6 +46,7 @@ const GroupsPage = () => {
     const groupUrlName = groupName.toLowerCase().replace(/\s/g, '-');
     try {
       const { data: createdGroup } = await client.models.Group.create({
+        groupId: groupDetails?.groupId || '', // Provide a default value if groupId is undefined
         groupname: groupName,
         groupUrlName,
         adminId: fetchedUserId,

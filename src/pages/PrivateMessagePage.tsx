@@ -62,34 +62,27 @@ const PrivateMessagePage = () => {
 
 
    useEffect(() => {
-    if (!groupName) return;
-    console.log('the room url name', groupName);
-    client.models.Room.listRoomByUrlName(
-        { urlName: groupName },
+    if (!groupName) return
+    console.log('the room url name', groupName)
+    client.models.Group.listGroupByGroupUrlName(
+        { groupUrlName: groupName },
         {
-            selectionSet: ['id', 'name', 'messages.*'],
+            selectionSet: ['id', 'groupname', 'messages.*'],
         }
     ).then(({ data }) => {
-        console.log('the data', data);
-        // Transform the data into the expected shape
-        const transformedData = data[0].messages.map((msg) => ({
-            groupId: data[0].id,
-            content: msg.content,
-            type: msg.type,
-            userNickname: msg.userNickname,
-            picId: msg.picId,
-            id: msg.id,
-            owner: msg.owner,
-            createdAt: msg.createdAt,
-            updatedAt: msg.updatedAt,
-        }));
-        setMsgs(transformedData as Schema['GroupMessage']['type'][]);
+        console.log('the data', data)
+        //sort messages by 'createdAt' field
+        data[0].messages.sort(
+            (a, b) =>
+                new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        )
+        setMsgs(data[0].messages as Schema['GroupMessage']['type'][])
         setGroupDetails({
             groupId: data[0].id,
-            groupname: data[0].name,
-        });
-    });
-}, [groupName]);
+            groupname: data[0].groupname,
+        })
+    })
+}, [groupName])
 
 
    useEffect(() => {
