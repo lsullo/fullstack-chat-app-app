@@ -44,7 +44,7 @@ const schema = a.schema({
             type: a.enum(['text', 'image']),
             content: a.string().required(),
             picId: a.string(),
-            groupuser: a.belongsTo('User', 'id'),
+            group: a.belongsTo('Group', 'joinedgroupid'),
             userNickname: a.string().required(),
         })
         .authorization((allow) => [
