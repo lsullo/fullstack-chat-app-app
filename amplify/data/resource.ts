@@ -26,12 +26,11 @@ const schema = a.schema({
 
     Group: a
         .model({
-            //groupId: a.id().required(),
             groupname: a.string().required(),
             groupUrlName: a.string().required(),
             messages: a.hasMany('GroupMessage', 'groupId'),
-            adminId: a.id().required(),  // Admin of the group
-            members: a.hasMany('GroupUser', 'groupId'),  // Connects to GroupUser for membership
+            adminId: a.id().required(),  
+            members: a.hasMany('GroupUser', 'groupId'),  
         })
         .secondaryIndexes((index) => [index('groupUrlName')])
         .authorization((allow) => [allow.authenticated().to(['create', 'read'])]),
@@ -56,7 +55,7 @@ const schema = a.schema({
             username: a.string().required(),
             email: a.string(),
             profilepicId: a.string(),
-            groups: a.hasMany('GroupUser', 'userId'),  // Connects to GroupUser for membership
+            groups: a.hasMany('GroupUser', 'userId'), 
         })
         .authorization((allow) => [
             allow.authenticated().to(['read', 'create', 'update']),
@@ -66,7 +65,7 @@ const schema = a.schema({
         .model({
             groupId: a.id().required(),
             userId: a.id().required(),
-            role: a.enum(['admin', 'member']),  // Role can be admin or member
+            role: a.enum(['admin', 'member']), 
             group: a.belongsTo('Group', 'groupId'),
             user: a.belongsTo('User', 'userId'),
         })
