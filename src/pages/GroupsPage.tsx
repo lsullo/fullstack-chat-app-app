@@ -42,9 +42,14 @@ const GroupsPage = () => {
         groupUrlName,
         adminId: fetchedUserId,
       });
-      if (createdGroup) {
+      if (createdGroup) {  //testing this 
         setGroupName('');
-        setGroups([...groups, createdGroup] as Schema['Group']['type'][]);
+        const groupUserResponse = await client.models.GroupUser.create({
+          groupId: createdGroup.id,
+          userId: fetchedUserId,
+          role: 'admin', 
+        });
+        if (groupUserResponse) setGroups([...groups, createdGroup] as Schema['Group']['type'][]); //end of test after if (groupUserResponse)|
         navigate(`/groups/${createdGroup.groupUrlName}`);
       } else {
         console.error('Error creating group:', createdGroup);
