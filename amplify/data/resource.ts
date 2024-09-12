@@ -33,7 +33,13 @@ const schema = a.schema({
             members: a.hasMany('GroupUser', 'groupId'),  
         })
         .secondaryIndexes((index) => [index('groupUrlName')])
-        .authorization((allow) => [allow.authenticated().to(['create', 'read'])]),
+        .authorization((allow) => [
+            allow.groups(['admin','member']).to(['read']),
+            allow.authenticated().to(['create'])
+        ]),
+        
+        
+        
 
     GroupMessage: a
         .model({
