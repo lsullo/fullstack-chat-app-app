@@ -12,7 +12,7 @@ const GroupsPage = () => {
   const [groupName, setGroupName] = useState('');
   const navigate = useNavigate();
   const client = generateClient<Schema>();
-  const [groupDetails] = useState<{groupId: string}>()
+  //const [groupDetails] = useState<{groupId: string}>()
   
 
   useEffect(() => {
@@ -21,7 +21,7 @@ const GroupsPage = () => {
         setGroups(groupsResponse.data);
       });
     } else {
-      console.error('Error accessing GroupChat model');
+      console.error('Error');
     }
   }, []);
 
@@ -35,18 +35,18 @@ const GroupsPage = () => {
     }
   }, [user]);
 
-  useEffect(() => {
-    client.models.Group.list().then((groupsResponse) => {
-      setGroups(groupsResponse.data);
-    });
-  }, []);
+ // useEffect(() => {
+    //client.models.Group.list().then((groupsResponse) => {
+      //setGroups(groupsResponse.data);
+   // });
+ // }, []);
 
   const handleCreateGroupSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const groupUrlName = groupName.toLowerCase().replace(/\s/g, '-');
     try {
       const { data: createdGroup } = await client.models.Group.create({
-        groupId: groupDetails?.groupId || '', // Provide a default value if groupId is undefined
+        //groupId: groupDetails?.groupId || '', // Provide a default value if groupId is undefined
         groupname: groupName,
         groupUrlName,
         adminId: fetchedUserId,
