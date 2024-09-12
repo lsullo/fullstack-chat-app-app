@@ -26,7 +26,7 @@ const schema = a.schema({
 
     Group: a
         .model({
-            groupId: a.id().required(),
+            //groupId: a.id().required(),
             groupname: a.string().required(),
             groupUrlName: a.string().required(),
             messages: a.hasMany('GroupMessage', 'groupId'),
