@@ -96,7 +96,7 @@ const GroupsPage = () => {
         </div>
       </div>
       <section>
-        {groups.map((group) => (
+        {groups.filter(group => group !== null).map((group) => (
           <article
             key={group.id}
             className="bg-accent rounded flex flex-col max-w-screen-md mx-auto p-4"
