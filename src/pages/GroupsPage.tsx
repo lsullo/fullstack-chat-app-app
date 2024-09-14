@@ -8,20 +8,10 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 const GroupsPage = () => {
   const { user } = useAuthenticator((context) => [context.user]);
   const [fetchedUserId, setFetchedUserId] = useState<string>('');
-  const [groups, setGroups] = useState<Schema['Group']['type'][]>([]);
   const [groupName, setGroupName] = useState('');
+  const [groups, setGroups] = useState<Schema['Group']['type'][]>([]);
   const navigate = useNavigate();
   const client = generateClient<Schema>();
-
-  useEffect(() => {
-    if (client.models && client.models.Group) {
-      client.models.Group.list().then((groupsResponse) => {
-        setGroups(groupsResponse.data);
-      });
-    } else {
-      console.error('Error');
-    }
-  }, []);
 
   useEffect(() => {
     if (user) {
@@ -33,6 +23,31 @@ const GroupsPage = () => {
     }
   }, [user]);
 
+  useEffect(() => {
+    const fetchUserGroups = async () => {
+      if (fetchedUserId && client.models.GroupUser) {
+        try {
+          const groupUserResponse = await client.models.GroupUser.list({
+            filter: { userId: { eq: fetchedUserId } },
+          });
+          const groupIds = groupUserResponse.data.map((groupUser) => groupUser.groupId);
+          if (groupIds.length > 0) {
+            const groupResponses = await Promise.all(
+              groupIds.map((groupId) =>
+                client.models.Group.get({ id: groupId })
+              )
+            );
+            const userGroups = groupResponses.map((res) => res.data as Schema['Group']['type']);
+            setGroups(userGroups);
+          }
+        } catch (error) {
+          console.error('Error fetching groups:', error);
+        }
+      }
+    };
+    fetchUserGroups();
+  }, [fetchedUserId]);
+
   const handleCreateGroupSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const groupUrlName = groupName.toLowerCase().replace(/\s/g, '-');
@@ -42,14 +57,14 @@ const GroupsPage = () => {
         groupUrlName,
         adminId: fetchedUserId,
       });
-      if (createdGroup) {  //testing this 
+      if (createdGroup) {
         setGroupName('');
         const groupUserResponse = await client.models.GroupUser.create({
           groupId: createdGroup.id,
           userId: fetchedUserId,
-          role: 'admin', 
+          role: 'admin',
         });
-        if (groupUserResponse) setGroups([...groups, createdGroup] as Schema['Group']['type'][]); //end of test after if (groupUserResponse)|
+        if (groupUserResponse) setGroups([...groups, createdGroup] as Schema['Group']['type'][]);
         navigate(`/groups/${createdGroup.groupUrlName}`);
       } else {
         console.error('Error creating group:', createdGroup);

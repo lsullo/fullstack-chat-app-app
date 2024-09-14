@@ -34,13 +34,10 @@ const schema = a.schema({
         })
         .secondaryIndexes((index) => [index('groupUrlName')])
         .authorization((allow) => [
-            allow.groups(['admin','member']).to(['read']),
-            allow.authenticated().to(['create'])
+            //allow.groups(['GroupUser','role']).to(['read', 'create']),
+            allow.authenticated().to(['read','create'])
         ]),
         
-        
-        
-
     GroupMessage: a
         .model({
             groupId: a.id().required(),
