@@ -15,18 +15,13 @@ const client = generateClient<Schema>()
 function formatTime(dateString: string): string {
    const date = new Date(dateString)
 
-
-   // Create an Intl.DateTimeFormat object with the desired options
    const formatter = new Intl.DateTimeFormat('en-US', {
        hour: 'numeric',
        minute: 'numeric',
-       hour12: true, // Use 24-hour format. Set to true if you want 12-hour format with AM/PM.
+       hour12: true, 
    })
 
-
-   // Format the date object
    const formattedTime = formatter.format(date)
-
 
    return formattedTime
 }
@@ -71,7 +66,6 @@ const MessagePage = () => {
            }
        ).then(({ data }) => {
            console.log('the data', data)
-           //sort messages by 'createdAt' field
            data[0].messages.sort(
                (a, b) =>
                    new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
@@ -111,7 +105,6 @@ const MessagePage = () => {
            console.log('nothing', newMessage)
        }
 
-
        if (msgFile) {
            const uploadedItem = await uploadData({
                data: msgFile,
@@ -126,7 +119,6 @@ const MessagePage = () => {
                picId: uploadedItem.path,
                userNickname,
            })
-
 
            setMsgs(
                (prev) => [...prev, { ...newMessage }] as Schema['Message']['type'][]
@@ -227,7 +219,6 @@ const MessagePage = () => {
        </div>
    )
 }
-
 
 export default MessagePage
 

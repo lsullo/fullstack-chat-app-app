@@ -34,7 +34,6 @@ const schema = a.schema({
         })
         .secondaryIndexes((index) => [index('groupUrlName')])
         .authorization((allow) => [
-            //allow.groups(['GroupUser','role']).to(['read', 'create']),
             allow.authenticated().to(['read','create'])
         ]),
         
@@ -52,25 +51,12 @@ const schema = a.schema({
             allow.authenticated().to(['read']),
         ]),
 
-    User: a
-        .model({
-            id: a.id().required(),
-            username: a.string().required(),
-            email: a.string(),
-            profilepicId: a.string(),
-            groups: a.hasMany('GroupUser', 'userId'), 
-        })
-        .authorization((allow) => [
-            allow.authenticated().to(['read', 'create', 'update']),
-        ]),
-
     GroupUser: a
         .model({
             groupId: a.id().required(),
             userId: a.id().required(),
             role: a.enum(['admin', 'member']), 
             group: a.belongsTo('Group', 'groupId'),
-            user: a.belongsTo('User', 'userId'),
         })
         .authorization((allow) => [allow.authenticated().to(['create', 'read'])]),
 })
