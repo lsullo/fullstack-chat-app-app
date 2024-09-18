@@ -10,6 +10,8 @@ const GroupsPage = () => {
   const [fetchedUserId, setFetchedUserId] = useState<string>('');
   const [groupName, setGroupName] = useState('');
   const [groups, setGroups] = useState<Schema['Group']['type'][]>([]);
+  const [isLoading, setIsLoading] = useState(true);  // Loading state
+  const [groupAdded, setGroupAdded] = useState(false);  // New state to track if user was added to Group "1"
   const navigate = useNavigate();
   const client = generateClient<Schema>();
 
@@ -24,8 +26,53 @@ const GroupsPage = () => {
   }, [user]);
 
   useEffect(() => {
+    const checkAndAddUserToGroupOne = async () => {
+      if (fetchedUserId && client.models.GroupUser && client.models.Group) {
+        try {
+          // Fetch the Group "1" by name
+          const groupResponse = await client.models.Group.list({
+            filter: { groupname: { eq: '1' } },
+          });
+
+          if (groupResponse.data.length > 0) {
+            const groupId = groupResponse.data[0].id;
+
+            // Check if the user is already in the group "1"
+            const groupUserResponse = await client.models.GroupUser.list({
+              filter: {
+                groupId: { eq: groupId },
+                userId: { eq: fetchedUserId },
+              },
+            });
+
+            // If user is not in the group, add them as a member
+            if (groupUserResponse.data.length === 0) {
+              await client.models.GroupUser.create({
+                groupId: groupId,
+                userId: fetchedUserId,
+                role: 'member',
+              });
+              console.log(`User ${fetchedUserId} added to Group "1" as a member`);
+              setGroupAdded(true);  // Set this to true to refetch the groups
+            }
+          } else {
+            console.warn('Group "1" not found');
+          }
+        } catch (error) {
+          console.error('Error checking or adding user to Group "1":', error);
+        }
+      }
+    };
+
+    if (fetchedUserId) {
+      checkAndAddUserToGroupOne();
+    }
+  }, [fetchedUserId, client.models.GroupUser, client.models.Group]);
+
+  useEffect(() => {
     const fetchUserGroups = async () => {
       if (fetchedUserId && client.models.GroupUser) {
+        setIsLoading(true);  // Start loading
         try {
           const groupUserResponse = await client.models.GroupUser.list({
             filter: { userId: { eq: fetchedUserId } },
@@ -42,11 +89,14 @@ const GroupsPage = () => {
           }
         } catch (error) {
           console.error('Error fetching groups:', error);
+        } finally {
+          setIsLoading(false);  // End loading
         }
       }
     };
+
     fetchUserGroups();
-  }, [fetchedUserId]);
+  }, [fetchedUserId, groupAdded]);  // Refetch groups if the user was added to group "1"
 
   const handleCreateGroupSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -77,24 +127,43 @@ const GroupsPage = () => {
   return (
     <>
       <h1 className="text-3xl text-center mt-12">Group Chat Rooms</h1>
-      <div className="my-8 w-full">
-        <div className="flex flex-col items-center">
-          <form onSubmit={handleCreateGroupSubmit}>
-            <input
-              className="input input-md input-primary mr-2"
-              placeholder="my cool group name"
-              value={groupName}
-              required
-              onChange={(e) => {
-                setGroupName(e.target.value);
-              }}
-            />
-            <button type="submit" className="btn btn-secondary">
-              Create Group
-            </button>
-          </form>
+      {isLoading ? (
+        <div className="text-center">Loading...</div> // Loading indicator
+      ) : (
+        <div className="my-8 w-full">
+          <div className="flex flex-col items-center">
+            <form onSubmit={handleCreateGroupSubmit}>
+              <input
+                className="input input-md input-primary mr-2"
+                placeholder="add user to group"
+                value={groupName}
+                required
+                onChange={(e) => {
+                  setGroupName(e.target.value);
+                }}
+              />
+            </form>
+          </div>
+          <div className="flex flex-col items-center">
+            <form onSubmit={handleCreateGroupSubmit}>
+              <input
+                className="input input-md input-primary mr-2"
+                placeholder="my cool group name"
+                value={groupName}
+                required
+                onChange={(e) => {
+                  setGroupName(e.target.value);
+                }}
+              />
+              <div className="flex flex-col items-center">
+                <button type="submit" className="btn btn-secondary">
+                  Create Group
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
-      </div>
+      )}
       <section>
         {groups.filter(group => group !== null).map((group) => (
           <article
