@@ -60,7 +60,16 @@ const schema = a.schema({
             email: a.string(),
         })
         .authorization((allow) => [allow.authenticated().to(['create', 'read'])]),
+
+    UserIndex: a
+        .model({
+            userId: a.id().required(),
+            role: a.enum(['VIP','User']),
+            email: a.string().required(),
+        })
+        .authorization((allow) => [allow.authenticated().to(['create', 'read'])]),
 })
+    
 
 export type Schema = ClientSchema<typeof schema>
 

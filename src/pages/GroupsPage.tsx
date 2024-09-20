@@ -8,13 +8,13 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 const GroupsPage = () => {
   const { user } = useAuthenticator((context) => [context.user]);
   const [fetchedUserId, setFetchedUserId] = useState<string>('');
-  const [userEmail, setUserEmail] = useState<string>(''); // User's email state
+  const [userEmail, setUserEmail] = useState<string>('');
   const [groupName, setGroupName] = useState('');
   const [groups, setGroups] = useState<Schema['Group']['type'][]>([]);
-  const [isLoading, setIsLoading] = useState(true);  
-  const [groupAdded, setGroupAdded] = useState(false);  
-  const [memberEmails, setMemberEmails] = useState<string[]>([]); // State to track member emails
-  const [emailInput, setEmailInput] = useState(''); // Input for searching and adding user by email
+  const [isLoading, setIsLoading] = useState(true);
+  const [groupAdded, setGroupAdded] = useState(false);
+  const [emailInput, setEmailInput] = useState(''); // State for email input
+  const [memberEmails, setMemberEmails] = useState<string[]>([]); // State for member emails
   const navigate = useNavigate();
   const client = generateClient<Schema>();
 
@@ -33,50 +33,9 @@ const GroupsPage = () => {
   }, [user]);
 
   useEffect(() => {
-    const checkAndAddUserToGroupOne = async () => {
-      if (fetchedUserId && client.models.GroupUser && client.models.Group) {
-        try {
-          const groupResponse = await client.models.Group.list({
-            filter: { groupname: { eq: '1' } },
-          });
-
-          if (groupResponse.data.length > 0) {
-            const groupId = groupResponse.data[0].id;
-
-            const groupUserResponse = await client.models.GroupUser.list({
-              filter: {
-                groupId: { eq: groupId },
-                userId: { eq: fetchedUserId },
-              },
-            });
-
-            if (groupUserResponse.data.length === 0) {
-              await client.models.GroupUser.create({
-                groupId: groupId,
-                userId: fetchedUserId,
-                email: userEmail,
-                role: 'member',
-              });
-              setGroupAdded(true); 
-            }
-          } else {
-            console.warn('Group "1" not found');
-          }
-        } catch (error) {
-          console.error('Error:', error);
-        }
-      }
-    };
-
-    if (fetchedUserId) {
-      checkAndAddUserToGroupOne();
-    }
-  }, [fetchedUserId, client.models.GroupUser, client.models.Group, userEmail]);
-
-  useEffect(() => {
     const fetchUserGroups = async () => {
       if (fetchedUserId && client.models.GroupUser) {
-        setIsLoading(true);  
+        setIsLoading(true);
         try {
           const groupUserResponse = await client.models.GroupUser.list({
             filter: { userId: { eq: fetchedUserId } },
@@ -84,9 +43,7 @@ const GroupsPage = () => {
           const groupIds = groupUserResponse.data.map((groupUser) => groupUser.groupId);
           if (groupIds.length > 0) {
             const groupResponses = await Promise.all(
-              groupIds.map((groupId) =>
-                client.models.Group.get({ id: groupId })
-              )
+              groupIds.map((groupId) => client.models.Group.get({ id: groupId }))
             );
             const userGroups = groupResponses.map((res) => res.data as Schema['Group']['type']);
             setGroups(userGroups);
@@ -94,7 +51,7 @@ const GroupsPage = () => {
         } catch (error) {
           console.error('Error:', error);
         } finally {
-          setIsLoading(false);  
+          setIsLoading(false);
         }
       }
     };
@@ -102,18 +59,23 @@ const GroupsPage = () => {
     fetchUserGroups();
   }, [fetchedUserId, groupAdded]);
 
-  const handleAddEmail = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter' && emailInput) {
+  // Handle email input for adding members
+  const handleEmailInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setEmailInput(e.target.value);
+  };
+
+  // Add email to the member list when pressing enter
+  const handleEmailInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && emailInput.trim() !== '') {
       e.preventDefault();
-      if (!memberEmails.includes(emailInput)) {
-        setMemberEmails([...memberEmails, emailInput]);
-      }
+      setMemberEmails([...memberEmails, emailInput.trim()]);
       setEmailInput('');
     }
   };
 
+  // Remove email from the member list
   const handleRemoveEmail = (email: string) => {
-    setMemberEmails(memberEmails.filter((item) => item !== email));
+    setMemberEmails(memberEmails.filter((e) => e !== email));
   };
 
   const handleCreateGroupSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
@@ -125,47 +87,40 @@ const GroupsPage = () => {
         groupUrlName,
         adminId: fetchedUserId,
       });
-
       if (createdGroup) {
         setGroupName('');
-        await client.models.GroupUser.create({
+        // Create a GroupUser entry for the current user as admin
+        const groupUserResponse = await client.models.GroupUser.create({
           groupId: createdGroup.id,
           userId: fetchedUserId,
           email: userEmail,
           role: 'admin',
         });
+        if (groupUserResponse) setGroups([...groups, createdGroup] as Schema['Group']['type'][]);
 
-        // Add each member email as a group user with 'member' role
+        // Add each entered email as a member if they exist in UserIndex
         for (const email of memberEmails) {
-          // Fetch the userId based on the email address
-          const userResponse = await client.models.GroupUser.list({
-            filter: { email: { eq: email } },
-          });
-
-          // Check if the user exists in the system
-          if (userResponse.data.length > 0) {
-            const userId = userResponse.data[0].id;
-
-            // Check if the user is already in the group
-            const existingUser = await client.models.GroupUser.list({
-              filter: { groupId: { eq: createdGroup.id }, userId: { eq: userId } },
+          try {
+            const userIndexResponse = await client.models.UserIndex.list({
+              filter: { email: { eq: email } },
             });
-
-            if (existingUser.data.length === 0) {
+            if (userIndexResponse.data.length > 0) {
+              const user = userIndexResponse.data[0];
               await client.models.GroupUser.create({
                 groupId: createdGroup.id,
-                userId: userId,
-                email: email, // Optional field
+                userId: user.userId,
+                email: user.email,
                 role: 'member',
               });
+            } else {
+              console.warn(`User with email ${email} not found in UserIndex`);
             }
-          } else {
-            console.warn(`User with email ${email} not found. No GroupUser created.`);
+          } catch (error) {
+            console.error(`Error adding user with email ${email}:`, error);
           }
         }
 
-        setGroups([...groups, createdGroup] as Schema['Group']['type'][]);
-        setMemberEmails([]); // Clear the selected members after creating the group
+        setGroupAdded(true); // Indicate that a group was added
         navigate(`/groups/${createdGroup.groupUrlName}`);
       } else {
         console.error('Error:', createdGroup);
@@ -186,36 +141,34 @@ const GroupsPage = () => {
             <form onSubmit={handleCreateGroupSubmit}>
               <input
                 className="input input-md input-primary mr-2"
-                placeholder="add user to group"
+                placeholder="my cool group name"
+                value={groupName}
+                required
+                onChange={(e) => setGroupName(e.target.value)}
+              />
+              <input
+                className="input input-md input-primary mr-2 mt-2"
+                placeholder="Enter email and press Enter"
                 value={emailInput}
-                onChange={(e) => setEmailInput(e.target.value)}
-                onKeyDown={handleAddEmail}
+                onChange={handleEmailInputChange}
+                onKeyDown={handleEmailInputKeyDown}
               />
               <div className="flex flex-wrap mt-2">
                 {memberEmails.map((email) => (
-                  <div key={email} className="bg-gray-300 rounded px-2 py-1 mr-2 mb-2 flex items-center">
-                    {email}
+                  <div key={email} className="bg-gray-200 p-2 m-1 rounded flex items-center">
+                    <span>{email}</span>
                     <button
                       type="button"
+                      className="ml-2 text-red-600"
                       onClick={() => handleRemoveEmail(email)}
-                      className="ml-1 text-red-500"
                     >
-                      x
+                      ×
                     </button>
                   </div>
                 ))}
               </div>
-              <input
-                className="input input-md input-primary mr-2 mt-4"
-                placeholder="my cool group name"
-                value={groupName}
-                required
-                onChange={(e) => {
-                  setGroupName(e.target.value);
-                }}
-              />
-              <div className="flex flex-col items-center mt-2">
-                <button type="submit" className="btn btn-secondary">
+              <div className="flex flex-col items-center">
+                <button type="submit" className="btn btn-secondary mt-4">
                   Create Group
                 </button>
               </div>
@@ -224,21 +177,23 @@ const GroupsPage = () => {
         </div>
       )}
       <section>
-        {groups.filter(group => group !== null).map((group) => (
-          <article
-            key={group.id}
-            className="bg-accent rounded flex flex-col max-w-screen-md mx-auto p-4"
-          >
-            <Link
-              className="text-2xl text-primary-content"
-              to={`/groups/${group.groupUrlName}`}
+        {groups
+          .filter((group) => group !== null)
+          .map((group) => (
+            <article
+              key={group.id}
+              className="bg-accent rounded flex flex-col max-w-screen-md mx-auto p-4"
             >
-              <div className="h-24 flex justify-center items-center">
-                {group.groupname}
-              </div>
-            </Link>
-          </article>
-        ))}
+              <Link
+                className="text-2xl text-primary-content"
+                to={`/groups/${group.groupUrlName}`}
+              >
+                <div className="h-24 flex justify-center items-center">
+                  {group.groupname}
+                </div>
+              </Link>
+            </article>
+          ))}
       </section>
     </>
   );
