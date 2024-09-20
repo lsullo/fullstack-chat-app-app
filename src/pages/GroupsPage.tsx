@@ -8,20 +8,27 @@ import { fetchAuthSession } from 'aws-amplify/auth';
 const GroupsPage = () => {
   const { user } = useAuthenticator((context) => [context.user]);
   const [fetchedUserId, setFetchedUserId] = useState<string>('');
+  const [userEmail, setUserEmail] = useState<string>(''); // User's email state
   const [groupName, setGroupName] = useState('');
   const [groups, setGroups] = useState<Schema['Group']['type'][]>([]);
-  const [isLoading, setIsLoading] = useState(true);  // Loading state
-  const [groupAdded, setGroupAdded] = useState(false);  // New state to track if user was added to Group "1"
+  const [isLoading, setIsLoading] = useState(true);  
+  const [groupAdded, setGroupAdded] = useState(false);  
+  const [memberEmails, setMemberEmails] = useState<string[]>([]); // State to track member emails
+  const [emailInput, setEmailInput] = useState(''); // Input for searching and adding user by email
   const navigate = useNavigate();
   const client = generateClient<Schema>();
 
   useEffect(() => {
     if (user) {
       fetchAuthSession().then((session) => {
-        setFetchedUserId(session.tokens?.idToken?.payload.sub as string);
+        const userId = session.tokens?.idToken?.payload.sub as string;
+        const email = session.tokens?.idToken?.payload.email as string;
+        setFetchedUserId(userId);
+        setUserEmail(email);
       });
     } else {
       setFetchedUserId('');
+      setUserEmail('');
     }
   }, [user]);
 
@@ -29,7 +36,6 @@ const GroupsPage = () => {
     const checkAndAddUserToGroupOne = async () => {
       if (fetchedUserId && client.models.GroupUser && client.models.Group) {
         try {
-          // Fetch the Group "1" by name
           const groupResponse = await client.models.Group.list({
             filter: { groupname: { eq: '1' } },
           });
@@ -37,7 +43,6 @@ const GroupsPage = () => {
           if (groupResponse.data.length > 0) {
             const groupId = groupResponse.data[0].id;
 
-            // Check if the user is already in the group "1"
             const groupUserResponse = await client.models.GroupUser.list({
               filter: {
                 groupId: { eq: groupId },
@@ -45,21 +50,20 @@ const GroupsPage = () => {
               },
             });
 
-            // If user is not in the group, add them as a member
             if (groupUserResponse.data.length === 0) {
               await client.models.GroupUser.create({
                 groupId: groupId,
                 userId: fetchedUserId,
+                email: userEmail,
                 role: 'member',
               });
-              console.log(`User ${fetchedUserId} added to Group "1" as a member`);
-              setGroupAdded(true);  // Set this to true to refetch the groups
+              setGroupAdded(true); 
             }
           } else {
             console.warn('Group "1" not found');
           }
         } catch (error) {
-          console.error('Error checking or adding user to Group "1":', error);
+          console.error('Error:', error);
         }
       }
     };
@@ -67,12 +71,12 @@ const GroupsPage = () => {
     if (fetchedUserId) {
       checkAndAddUserToGroupOne();
     }
-  }, [fetchedUserId, client.models.GroupUser, client.models.Group]);
+  }, [fetchedUserId, client.models.GroupUser, client.models.Group, userEmail]);
 
   useEffect(() => {
     const fetchUserGroups = async () => {
       if (fetchedUserId && client.models.GroupUser) {
-        setIsLoading(true);  // Start loading
+        setIsLoading(true);  
         try {
           const groupUserResponse = await client.models.GroupUser.list({
             filter: { userId: { eq: fetchedUserId } },
@@ -88,15 +92,29 @@ const GroupsPage = () => {
             setGroups(userGroups);
           }
         } catch (error) {
-          console.error('Error fetching groups:', error);
+          console.error('Error:', error);
         } finally {
-          setIsLoading(false);  // End loading
+          setIsLoading(false);  
         }
       }
     };
 
     fetchUserGroups();
-  }, [fetchedUserId, groupAdded]);  // Refetch groups if the user was added to group "1"
+  }, [fetchedUserId, groupAdded]);
+
+  const handleAddEmail = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter' && emailInput) {
+      e.preventDefault();
+      if (!memberEmails.includes(emailInput)) {
+        setMemberEmails([...memberEmails, emailInput]);
+      }
+      setEmailInput('');
+    }
+  };
+
+  const handleRemoveEmail = (email: string) => {
+    setMemberEmails(memberEmails.filter((item) => item !== email));
+  };
 
   const handleCreateGroupSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
@@ -107,20 +125,53 @@ const GroupsPage = () => {
         groupUrlName,
         adminId: fetchedUserId,
       });
+
       if (createdGroup) {
         setGroupName('');
-        const groupUserResponse = await client.models.GroupUser.create({
+        await client.models.GroupUser.create({
           groupId: createdGroup.id,
           userId: fetchedUserId,
+          email: userEmail,
           role: 'admin',
         });
-        if (groupUserResponse) setGroups([...groups, createdGroup] as Schema['Group']['type'][]);
+
+        // Add each member email as a group user with 'member' role
+        for (const email of memberEmails) {
+          // Fetch the userId based on the email address
+          const userResponse = await client.models.GroupUser.list({
+            filter: { email: { eq: email } },
+          });
+
+          // Check if the user exists in the system
+          if (userResponse.data.length > 0) {
+            const userId = userResponse.data[0].id;
+
+            // Check if the user is already in the group
+            const existingUser = await client.models.GroupUser.list({
+              filter: { groupId: { eq: createdGroup.id }, userId: { eq: userId } },
+            });
+
+            if (existingUser.data.length === 0) {
+              await client.models.GroupUser.create({
+                groupId: createdGroup.id,
+                userId: userId,
+                email: email, // Optional field
+                role: 'member',
+              });
+            }
+          } else {
+            console.warn(`User with email ${email} not found. No GroupUser created.`);
+          }
+        }
+
+        setGroups([...groups, createdGroup] as Schema['Group']['type'][]);
+        setMemberEmails([]); // Clear the selected members after creating the group
         navigate(`/groups/${createdGroup.groupUrlName}`);
       } else {
-        console.error('Error creating group:', createdGroup);
+        console.error('Error:', createdGroup);
       }
     } catch (error) {
-      console.error('Error creating group:', error);
+      console.error('Error:', error);
     }
   };
 
@@ -128,7 +179,7 @@ const GroupsPage = () => {
     <>
       <h1 className="text-3xl text-center mt-12">Group Chat Rooms</h1>
       {isLoading ? (
-        <div className="text-center">Loading...</div> // Loading indicator
+        <div className="text-center">Loading...</div>
       ) : (
         <div className="my-8 w-full">
           <div className="flex flex-col items-center">
@@ -136,18 +187,26 @@ const GroupsPage = () => {
               <input
                 className="input input-md input-primary mr-2"
                 placeholder="add user to group"
-                value={groupName}
-                required
-                onChange={(e) => {
-                  setGroupName(e.target.value);
-                }}
+                value={emailInput}
+                onChange={(e) => setEmailInput(e.target.value)}
+                onKeyDown={handleAddEmail}
               />
-            </form>
-          </div>
-          <div className="flex flex-col items-center">
-            <form onSubmit={handleCreateGroupSubmit}>
+              <div className="flex flex-wrap mt-2">
+                {memberEmails.map((email) => (
+                  <div key={email} className="bg-gray-300 rounded px-2 py-1 mr-2 mb-2 flex items-center">
+                    {email}
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveEmail(email)}
+                      className="ml-1 text-red-500"
+                    >
+                      x
+                    </button>
+                  </div>
+                ))}
+              </div>
               <input
-                className="input input-md input-primary mr-2"
+                className="input input-md input-primary mr-2 mt-4"
                 placeholder="my cool group name"
                 value={groupName}
                 required
@@ -155,7 +214,7 @@ const GroupsPage = () => {
                   setGroupName(e.target.value);
                 }}
               />
-              <div className="flex flex-col items-center">
+              <div className="flex flex-col items-center mt-2">
                 <button type="submit" className="btn btn-secondary">
                   Create Group
                 </button>

@@ -143,7 +143,7 @@ const PrivateMessagePage = () => {
       }
    }
 
-   // Render loading or "Not Authorized" message until check completes
+
    if (loading) {
       return (
          <div className="flex justify-center items-center h-screen">
