@@ -32,6 +32,35 @@ const GroupsPage = () => {
     }
   }, [user]);
 
+  // Check and create UserIndex entry if it does not exist
+  useEffect(() => {
+    const checkAndCreateUserIndex = async () => {
+      if (fetchedUserId && client.models.UserIndex) {
+        try {
+          const userIndexResponse = await client.models.UserIndex.list({
+            filter: { userId: { eq: fetchedUserId } },
+          });
+
+          // If no entry exists, create a new UserIndex entry
+          if (userIndexResponse.data.length === 0) {
+            await client.models.UserIndex.create({
+              userId: fetchedUserId,
+              email: userEmail,
+              role: 'User', // Default role
+            });
+            console.log('UserIndex created for new user.');
+          }
+        } catch (error) {
+          console.error('Error creating UserIndex for new user:', error);
+        }
+      }
+    };
+
+    if (fetchedUserId) {
+      checkAndCreateUserIndex();
+    }
+  }, [fetchedUserId, client.models.UserIndex, userEmail]);
+
   useEffect(() => {
     const fetchUserGroups = async () => {
       if (fetchedUserId && client.models.GroupUser) {
