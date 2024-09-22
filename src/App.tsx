@@ -29,7 +29,7 @@ const router = createBrowserRouter([
           },
           {
             path: 'groups/create',
-            element: <GroupsPage />, // Assuming you have a component for creating rooms
+            element: <GroupsPage />, 
           },
           {
             path: 'rooms',
@@ -41,7 +41,7 @@ const router = createBrowserRouter([
           },
           {
             path: 'rooms/create',
-            element: <RoomsPage />, // Assuming you have a component for creating rooms
+            element: <RoomsPage />, 
           },
         ],
       },

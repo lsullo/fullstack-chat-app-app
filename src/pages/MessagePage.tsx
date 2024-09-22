@@ -33,7 +33,6 @@ const MessagePage = () => {
    const { roomName } = useParams()
    const fileInputRef = useRef<HTMLInputElement | null>(null)
 
-
    const [roomDetails, setRoomDetails] = useState<{
        roomId: string
        name: string
@@ -85,7 +84,6 @@ const MessagePage = () => {
            setUserNickname(user2.tokens?.idToken?.payload['nickname'] as string)
        })
    }, [])
-
 
    const handleSubmit = async (e: FormEvent) => {
        e.preventDefault()

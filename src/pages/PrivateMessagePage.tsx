@@ -28,6 +28,7 @@ const PrivateMessagePage = () => {
    const [userNickname, setUserNickname] = useState('')
    const { groupName } = useParams()
    const fileInputRef = useRef<HTMLInputElement | null>(null)
+   const messagesEndRef = useRef<HTMLDivElement | null>(null)
 
    const [groupDetails, setGroupDetails] = useState<{
        groupId: string
@@ -38,9 +39,8 @@ const PrivateMessagePage = () => {
    const [msgs, setMsgs] = useState<Schema['GroupMessage']['type'][]>([])
    const [fetchedUserId, setFetchedUserId] = useState('')
    const [isUserInGroup, setIsUserInGroup] = useState(true)
-   const [loading, setLoading] = useState(true)  // New loading state
+   const [loading, setLoading] = useState(true)
 
-   // Fetch Authenticated User Session
    useEffect(() => {
       if (user) {
          fetchAuthSession().then((session) => {
@@ -48,10 +48,9 @@ const PrivateMessagePage = () => {
          })
       } else {
          setFetchedUserId('')
-      }
+      }  
    }, [user])
 
-   // Check if the authenticated user is part of the group
    useEffect(() => {
       const fetchGroupUsers = async () => {
          if (groupDetails?.groupId && fetchedUserId) {
@@ -65,10 +64,10 @@ const PrivateMessagePage = () => {
                )
 
                setIsUserInGroup(isUserInGroup)
-               setLoading(false)  // Stop loading after the check is done
+               setLoading(false)
             } catch (error) {
                console.error('Error fetching group users:', error)
-               setLoading(false)  // Ensure loading stops even on error
+               setLoading(false)
             }
          }
       }
@@ -103,6 +102,26 @@ const PrivateMessagePage = () => {
          setUserNickname(user2.tokens?.idToken?.payload['nickname'] as string)
       })
    }, [])
+
+   // Subscription to new messages
+   useEffect(() => {
+       const sub = client.models.GroupMessage.onCreate().subscribe({
+           next: (data) => {
+               if (data.owner !== user.username) {
+                   setMsgs((prev) => [...prev, { ...data }])
+               }
+           },
+           error: (error) => console.warn(error),
+       })
+       return () => sub.unsubscribe()
+   }, [user.username])
+
+   // Scroll to the bottom when messages change
+   useEffect(() => {
+       if (messagesEndRef.current) {
+           messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
+       }
+   }, [msgs])
 
    const handleSubmit = async (e: FormEvent) => {
       e.preventDefault()
@@ -143,7 +162,6 @@ const PrivateMessagePage = () => {
       }
    }
 
-
    if (loading) {
       return (
          <div className="flex justify-center items-center h-screen">
@@ -167,6 +185,7 @@ const PrivateMessagePage = () => {
 
    return (
       <div className="flex flex-col h-screen">
+         {/* Scrollable message area */}
          <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {msgs.map((msg) => (
                <div
@@ -228,7 +247,10 @@ const PrivateMessagePage = () => {
                   )}
                </div>
             ))}
+            <div ref={messagesEndRef} />
          </div>
+
+         {/* Fixed input form at the bottom */}
          <form onSubmit={handleSubmit} className="bg-info py-4 px-6 flex items-center">
             <input
                className="flex-1 input"
