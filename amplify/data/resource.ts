@@ -57,6 +57,7 @@ const schema = a.schema({
             userId: a.id().required(),
             role: a.enum(['admin', 'member']), 
             group: a.belongsTo('Group', 'groupId'),
+            userNickname: a.string(),
             email: a.string(),
         })
         .authorization((allow) => [allow.authenticated().to(['create', 'read'])]),

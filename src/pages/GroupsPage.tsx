@@ -15,6 +15,7 @@ const GroupsPage = () => {
   const [groupAdded, setGroupAdded] = useState(false);
   const [emailInput, setEmailInput] = useState(''); // State for email input
   const [memberEmails, setMemberEmails] = useState<string[]>([]); // State for member emails
+  const [userNickname, setUserNickname] = useState('')
   const navigate = useNavigate();
   const client = generateClient<Schema>();
 
@@ -23,8 +24,10 @@ const GroupsPage = () => {
       fetchAuthSession().then((session) => {
         const userId = session.tokens?.idToken?.payload.sub as string;
         const email = session.tokens?.idToken?.payload.email as string;
+        const nickname = session.tokens?.idToken?.payload['nickname'] as string;
         setFetchedUserId(userId);
         setUserEmail(email);
+        setUserNickname(nickname);
       });
     } else {
       setFetchedUserId('');
@@ -32,7 +35,6 @@ const GroupsPage = () => {
     }
   }, [user]);
 
-  // Check and create UserIndex entry if it does not exist
   useEffect(() => {
     const checkAndCreateUserIndex = async () => {
       if (fetchedUserId && client.models.UserIndex) {
@@ -41,17 +43,16 @@ const GroupsPage = () => {
             filter: { userId: { eq: fetchedUserId } },
           });
 
-          // If no entry exists, create a new UserIndex entry
           if (userIndexResponse.data.length === 0) {
             await client.models.UserIndex.create({
               userId: fetchedUserId,
               email: userEmail,
-              role: 'User', // Default role
+              role: 'User', 
             });
             console.log('UserIndex created for new user.');
           }
         } catch (error) {
-          console.error('Error creating UserIndex for new user:', error);
+          console.error('Error', error);
         }
       }
     };
@@ -88,12 +89,12 @@ const GroupsPage = () => {
     fetchUserGroups();
   }, [fetchedUserId, groupAdded]);
 
-  // Handle email input for adding members
+ 
   const handleEmailInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmailInput(e.target.value);
   };
 
-  // Add email to the member list when pressing enter
+  
   const handleEmailInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && emailInput.trim() !== '') {
       e.preventDefault();
@@ -102,7 +103,7 @@ const GroupsPage = () => {
     }
   };
 
-  // Remove email from the member list
+ 
   const handleRemoveEmail = (email: string) => {
     setMemberEmails(memberEmails.filter((e) => e !== email));
   };
@@ -118,16 +119,17 @@ const GroupsPage = () => {
       });
       if (createdGroup) {
         setGroupName('');
-        // Create a GroupUser entry for the current user as admin
+        
         const groupUserResponse = await client.models.GroupUser.create({
           groupId: createdGroup.id,
           userId: fetchedUserId,
           email: userEmail,
           role: 'admin',
+          userNickname,
         });
         if (groupUserResponse) setGroups([...groups, createdGroup] as Schema['Group']['type'][]);
 
-        // Add each entered email as a member if they exist in UserIndex
+        
         for (const email of memberEmails) {
           try {
             const userIndexResponse = await client.models.UserIndex.list({
@@ -140,6 +142,7 @@ const GroupsPage = () => {
                 userId: user.userId,
                 email: user.email,
                 role: 'member',
+                userNickname,
               });
             } else {
               console.warn(`User with email ${email} not found in UserIndex`);
@@ -149,7 +152,7 @@ const GroupsPage = () => {
           }
         }
 
-        setGroupAdded(true); // Indicate that a group was added
+        setGroupAdded(true); 
         navigate(`/groups/${createdGroup.groupUrlName}`);
       } else {
         console.error('Error:', createdGroup);

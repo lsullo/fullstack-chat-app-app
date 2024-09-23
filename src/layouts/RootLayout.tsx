@@ -28,7 +28,7 @@ export default function RootLayout() {
       <main className="flex-1">
         <Outlet context={{ fetchedUserNickname }} />
       </main>
-      <Footer />
+      <Footer/>
     </div>
   );
 }
