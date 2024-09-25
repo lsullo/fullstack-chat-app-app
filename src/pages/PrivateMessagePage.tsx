@@ -59,33 +59,34 @@ const PrivateMessagePage = () => {
      } 
   }, [user])
 
-
   useEffect(() => {
    const fetchGroupUsers = async () => {
      if (groupDetails?.groupId && fetchedUserId) {
        try {
-         setLoadingNicknames(true); // Set loading state to true before fetching data
-         
+         setLoadingNicknames(true);
+ 
          const groupUserResponse = await client.models.GroupUser.list({
            filter: { groupId: { eq: groupDetails.groupId } },
          });
- 
+
          const isUserInGroup = groupUserResponse.data.some(
            (groupUser) => groupUser.userId === fetchedUserId
          );
- 
          setIsUserInGroup(isUserInGroup);
- 
-         // Map nicknames and filter out null or undefined values
+
          const usersList = groupUserResponse.data
            .map((groupUser) => groupUser.userNickname)
            .filter((nickname): nickname is string => nickname !== null && nickname !== undefined);
  
-         setFetchedUsers(usersList);
+         //console.log('Mapped User Nicknames:', usersList);
+         //console.log('Full Group User Response:', groupUserResponse);
+
+         setFetchedUsers(usersList); 
+ 
        } catch (error) {
          console.error('Error fetching group users:', error);
        } finally {
-         setLoadingNicknames(false); // Ensure loading is set to false after fetch
+         setLoadingNicknames(false); 
        }
      }
    };
@@ -94,6 +95,7 @@ const PrivateMessagePage = () => {
      fetchGroupUsers();
    }
  }, [groupDetails, fetchedUserId]);
+ 
 
     useEffect(() => {
      const fetchGroupUsers = async () => {
@@ -159,22 +161,19 @@ const PrivateMessagePage = () => {
      })
   }, [])
 
-
-  // Subscription to new messages
   useEffect(() => {
-      const sub = client.models.GroupMessage.onCreate().subscribe({
-          next: (data) => {
-              if (data.owner !== user.username) {
-                  setMsgs((prev) => [...prev, { ...data }])
-              }
-          },
-          error: (error) => console.warn(error),
-      })
-      return () => sub.unsubscribe()
-  }, [user.username])
+   const sub = client.models.GroupMessage.onCreate().subscribe({
+       next: (data) => {
+      
+           if (data.groupId === groupDetails?.groupId && data.owner !== user.username) {
+               setMsgs((prev) => [...prev, { ...data }]);
+           }
+       },
+       error: (error) => console.warn(error),
+   });
+   return () => sub.unsubscribe();
+}, [user.username, groupDetails?.groupId]); 
 
-
-  // Scroll to the bottom when messages change
   useEffect(() => {
       if (messagesEndRef.current) {
           messagesEndRef.current.scrollIntoView({ behavior: 'smooth' })
@@ -185,6 +184,10 @@ const PrivateMessagePage = () => {
   const handleSubmit = async (e: FormEvent) => {
      e.preventDefault()
 
+     if (!groupDetails?.groupId) {
+      console.warn("Group ID is missing. Cannot send message.");
+      return;
+   }
 
      if (msgText) {
         const { data: newMessage } = await client.models.GroupMessage.create({
@@ -196,7 +199,6 @@ const PrivateMessagePage = () => {
         setMsgs((prev) => [...prev, { ...newMessage }] as Schema['GroupMessage']['type'][])
         setMsgText('')
      }
-
 
      if (msgFile) {
         const uploadedItem = await uploadData({
@@ -227,7 +229,6 @@ const PrivateMessagePage = () => {
      }
   }
 
-
   if (loading) {
      return (
         <div className="flex justify-center items-center h-screen">
@@ -235,7 +236,6 @@ const PrivateMessagePage = () => {
         </div>
      )
   }
-
 
   if (!isUserInGroup) {
      return (
@@ -250,19 +250,30 @@ const PrivateMessagePage = () => {
      )
   }
 
-
   return (
      <div className="flex flex-col h-screen">
    
    {loadingNicknames ? (
-      <span className="user-nicknames text-primary-content"> </span>
+  <span className="user-nicknames text-primary-content"></span>
+) : (
+  <span className="user-nicknames text-primary-content">
+    {fetchedUsers.length <= 3 ? (
+      // Display nicknames as is if there are 3 or fewer users
+      fetchedUsers.map((nickname, index) => (
+        <span key={index}>{nickname}{index < fetchedUsers.length - 1 ? ', ' : ''}</span>
+      ))
     ) : (
-      <span className="user-nicknames text-primary-content">
-        {fetchedUsers.length <= 3
-          ? fetchedUsers.join(', ')
-          : `${fetchedUsers.slice(0, 3).join(', ')}, ${fetchedUsers[3].substring(0, 3)}...`}
-      </span>
+      // Display first 3 nicknames and truncate the fourth one if there are more than 3 users
+      <>
+        {fetchedUsers.slice(0, 3).map((nickname, index) => (
+          <span key={index}>{nickname}{index < 2 ? ', ' : ''}</span>
+        ))}
+        , {fetchedUsers[3].substring(0, 3)}...
+      </>
     )}
+  </span>
+)}
+
 
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
         <button
@@ -335,8 +346,6 @@ const PrivateMessagePage = () => {
            <div ref={messagesEndRef} />
         </div>
 
-
-        {/* Fixed input form at the bottom */}
         <form onSubmit={handleSubmit} className="bg-info py-4 px-6 flex items-center">
            <input
               className="flex-1 input"
@@ -358,6 +367,5 @@ const PrivateMessagePage = () => {
      </div>
   )
 }
-
 
 export default PrivateMessagePage

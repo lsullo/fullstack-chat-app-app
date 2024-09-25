@@ -66,6 +66,7 @@ const schema = a.schema({
         .model({
             userId: a.id().required(),
             role: a.enum(['VIP','User']),
+            userNickname: a.string(),
             email: a.string().required(),
         })
         .authorization((allow) => [allow.authenticated().to(['create', 'read'])]),

@@ -48,6 +48,7 @@ const GroupsPage = () => {
               userId: fetchedUserId,
               email: userEmail,
               role: 'User', 
+              userNickname,
             });
             console.log('UserIndex created for new user.');
           }
