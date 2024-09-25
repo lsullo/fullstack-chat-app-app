@@ -61,32 +61,28 @@ const PrivateMessagePage = () => {
 
   useEffect(() => {
    const fetchGroupUsers = async () => {
-     if (groupDetails?.groupId && fetchedUserId) {
+     if (groupDetails?.groupId) {
        try {
          setLoadingNicknames(true);
  
+         // Fetch users based on the current group ID
          const groupUserResponse = await client.models.GroupUser.list({
            filter: { groupId: { eq: groupDetails.groupId } },
          });
-
-         const isUserInGroup = groupUserResponse.data.some(
-           (groupUser) => groupUser.userId === fetchedUserId
-         );
-         setIsUserInGroup(isUserInGroup);
-
+         console.log('Fetched Group User Data:', groupUserResponse);
+ 
+         // Extract nicknames of the users in the group
          const usersList = groupUserResponse.data
            .map((groupUser) => groupUser.userNickname)
            .filter((nickname): nickname is string => nickname !== null && nickname !== undefined);
  
-         //console.log('Mapped User Nicknames:', usersList);
-         //console.log('Full Group User Response:', groupUserResponse);
-
-         setFetchedUsers(usersList); 
+         // Set the list of usernames
+         setFetchedUsers(usersList);
  
        } catch (error) {
          console.error('Error fetching group users:', error);
        } finally {
-         setLoadingNicknames(false); 
+         setLoadingNicknames(false);
        }
      }
    };
@@ -94,7 +90,8 @@ const PrivateMessagePage = () => {
    if (groupDetails?.groupId) {
      fetchGroupUsers();
    }
- }, [groupDetails, fetchedUserId]);
+ }, [groupDetails]);
+ 
  
 
     useEffect(() => {
@@ -257,24 +254,9 @@ const PrivateMessagePage = () => {
   <span className="user-nicknames text-primary-content"></span>
 ) : (
   <span className="user-nicknames text-primary-content">
-    {fetchedUsers.length <= 3 ? (
-      // Display nicknames as is if there are 3 or fewer users
-      fetchedUsers.map((nickname, index) => (
-        <span key={index}>{nickname}{index < fetchedUsers.length - 1 ? ', ' : ''}</span>
-      ))
-    ) : (
-      // Display first 3 nicknames and truncate the fourth one if there are more than 3 users
-      <>
-        {fetchedUsers.slice(0, 3).map((nickname, index) => (
-          <span key={index}>{nickname}{index < 2 ? ', ' : ''}</span>
-        ))}
-        , {fetchedUsers[3].substring(0, 3)}...
-      </>
-    )}
+    {fetchedUsers.join(', ')}
   </span>
 )}
-
-
         <div className="flex-1 overflow-y-auto p-6 space-y-4">
         <button
        id="openPopupButton"

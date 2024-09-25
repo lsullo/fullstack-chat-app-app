@@ -39,30 +39,35 @@ const GroupsPage = () => {
     const checkAndCreateUserIndex = async () => {
       if (fetchedUserId && client.models.UserIndex) {
         try {
+          // Check if the UserIndex already exists
           const userIndexResponse = await client.models.UserIndex.list({
             filter: { userId: { eq: fetchedUserId } },
           });
-
+  
+          // Only create if no existing UserIndex found
           if (userIndexResponse.data.length === 0) {
+            // Use a mutex or ensure check and create happen sequentially
             await client.models.UserIndex.create({
               userId: fetchedUserId,
               email: userEmail,
-              role: 'User', 
+              role: 'User',
               userNickname,
             });
             console.log('UserIndex created for new user.');
+          } else {
+            console.log('UserIndex already exists for this user.');
           }
         } catch (error) {
-          console.error('Error', error);
+          console.error('Error during UserIndex creation:', error);
         }
       }
     };
-
+  
     if (fetchedUserId) {
       checkAndCreateUserIndex();
     }
   }, [fetchedUserId, client.models.UserIndex, userEmail]);
-
+  
   useEffect(() => {
     const fetchUserGroups = async () => {
       if (fetchedUserId && client.models.GroupUser) {
@@ -133,17 +138,21 @@ const GroupsPage = () => {
         
         for (const email of memberEmails) {
           try {
+            // Fetch user details from UserIndex based on email
             const userIndexResponse = await client.models.UserIndex.list({
               filter: { email: { eq: email } },
             });
+        
             if (userIndexResponse.data.length > 0) {
               const user = userIndexResponse.data[0];
+              
+              // Create GroupUser with correct user data from the UserIndex
               await client.models.GroupUser.create({
                 groupId: createdGroup.id,
                 userId: user.userId,
                 email: user.email,
                 role: 'member',
-                userNickname,
+                userNickname: user.userNickname, // Use the fetched nickname
               });
             } else {
               console.warn(`User with email ${email} not found in UserIndex`);
@@ -152,6 +161,7 @@ const GroupsPage = () => {
             console.error(`Error adding user with email ${email}:`, error);
           }
         }
+        
 
         setGroupAdded(true); 
         navigate(`/groups/${createdGroup.groupUrlName}`);
