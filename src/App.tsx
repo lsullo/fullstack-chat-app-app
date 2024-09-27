@@ -3,8 +3,6 @@ import { Authenticator } from '@aws-amplify/ui-react';
 import RootLayout from './layouts/RootLayout';
 import ProtectedLayout from './layouts/ProtectedLayout';
 import HomePage from './pages/HomePage';
-import RoomsPage from './pages/RoomsPage';
-import MessagePage from './pages/MessagePage';
 import GroupsPage from './pages/GroupsPage';
 import PrivateMessagePage from './pages/PrivateMessagePage';
 
@@ -30,18 +28,6 @@ const router = createBrowserRouter([
           {
             path: 'groups/create',
             element: <GroupsPage />, 
-          },
-          {
-            path: 'rooms',
-            element: <RoomsPage />,
-          },
-          {
-            path: 'rooms/:roomName',
-            element: <MessagePage />,
-          },
-          {
-            path: 'rooms/create',
-            element: <RoomsPage />, 
           },
         ],
       },

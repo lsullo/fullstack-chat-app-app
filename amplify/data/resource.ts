@@ -41,7 +41,7 @@ const schema = a.schema({
         .model({
             groupId: a.id().required(),
             type: a.enum(['text', 'image']),
-            content: a.string().required(),
+            content: a.string(),
             picId: a.string(),
             group: a.belongsTo('Group', 'groupId'),
             userNickname: a.string().required(),

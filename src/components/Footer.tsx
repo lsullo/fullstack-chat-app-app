@@ -17,7 +17,7 @@ const Footer = () => {
             </Link>
           </li>
           <li>
-            <Link to="/" className="flex items-center">
+            <Link to="https://x.com/HugeDickLou" className="flex items-center">
               <FaInfoCircle className="mr-2" /> {/* Info icon */}
             </Link>
           </li>
