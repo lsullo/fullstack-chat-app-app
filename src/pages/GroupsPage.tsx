@@ -146,7 +146,15 @@ const GroupsPage = () => {
             if (userIndexResponse.data.length > 0) {
               const user = userIndexResponse.data[0];
               
-              // Create GroupUser with correct user data from the UserIndex
+            const existingGroupUserResponse = await client.models.GroupUser.list({
+              filter: {
+                groupId: { eq: createdGroup.id },
+                userId: { eq: user.userId },
+              },
+            });
+
+            // If the user is not already in the group, add them
+              if (existingGroupUserResponse.data.length === 0)
               await client.models.GroupUser.create({
                 groupId: createdGroup.id,
                 userId: user.userId,

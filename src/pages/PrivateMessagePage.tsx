@@ -81,6 +81,16 @@ const PrivateMessagePage = () => {
 
         if (userIndexResponse.data.length > 0) {
           const user = userIndexResponse.data[0];
+           // Check if the user is already in the group
+           const existingGroupUserResponse = await client.models.GroupUser.list({
+            filter: {
+              groupId: { eq: groupDetails.groupId },
+              userId: { eq: user.userId },
+            },
+          });
+
+          // If the user is not already in the group, add them
+          if (existingGroupUserResponse.data.length === 0)
 
           // Create GroupUser with correct user data from the UserIndex
           await client.models.GroupUser.create({
