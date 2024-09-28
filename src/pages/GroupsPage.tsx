@@ -177,32 +177,69 @@ const GroupsPage = () => {
 
   // Function to handle actual deletion of the group
 // Function to handle actual deletion of the group and its associated messages
+// Function to handle actual deletion of the group and its associated messages
+// Function to handle actual deletion of the group and its associated messages and users
 const handleDeleteGroup = async () => {
   if (deleteGroupId) {
     try {
-      // Fetch all messages associated with the group
+      // Fetch and delete all messages associated with the group
       const messagesResponse = await client.models.GroupMessage.list({
         filter: { groupId: { eq: deleteGroupId } },
       });
 
-      // Delete each message associated with the group
-      await Promise.all(
-        messagesResponse.data.map((message) =>
-          client.models.GroupMessage.delete({ id: message.id })
-        )
-      );
+      if (messagesResponse.data.length > 0) {
+        await Promise.all(
+          messagesResponse.data.map(async (message) => {
+            const { errors } = await client.models.GroupMessage.delete({ id: message.id });
+            if (errors) {
+              console.error(`Error deleting message with ID: ${message.id}`, errors);
+            } else {
+              console.log(`Deleted message with ID: ${message.id}`);
+            }
+          })
+        );
+      } else {
+        console.log('No messages found to delete.');
+      }
 
-      // Delete the group itself after deleting its messages
-      await client.models.Group.delete({ id: deleteGroupId });
+      // Fetch and delete all users associated with the group
+      const groupUsersResponse = await client.models.GroupUser.list({
+        filter: { groupId: { eq: deleteGroupId } },
+      });
 
-      // Update the groups state to reflect the deletion
-      setGroups(groups.filter((group) => group.id !== deleteGroupId));
-      setDeleteGroupId(null);
+      if (groupUsersResponse.data.length > 0) {
+        await Promise.all(
+          groupUsersResponse.data.map(async (user) => {
+            const { errors } = await client.models.GroupUser.delete({ id: user.id });
+            if (errors) {
+              console.error(`Error deleting group user with ID: ${user.id}`, errors);
+            } else {
+              console.log(`Deleted group user with ID: ${user.id}`);
+            }
+          })
+        );
+      } else {
+        console.log('No group users found to delete.');
+      }
+
+      // Finally, delete the group itself
+      const { errors } = await client.models.Group.delete({ id: deleteGroupId });
+      if (errors) {
+        console.error(`Error deleting group with ID: ${deleteGroupId}`, errors);
+      } else {
+        console.log(`Deleted group with ID: ${deleteGroupId}`);
+        // Update the groups state to reflect the deletion in the UI
+        setGroups(groups.filter((group) => group.id !== deleteGroupId));
+        setDeleteGroupId(null);
+      }
     } catch (error) {
-      console.error('Error deleting group and its messages:', error);
+      console.error('Error deleting group and its associated data:', error);
     }
   }
 };
+
+
+
 
 
   // Function to close the delete confirmation popup

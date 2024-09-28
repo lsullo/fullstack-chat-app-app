@@ -34,7 +34,7 @@ const schema = a.schema({
         })
         .secondaryIndexes((index) => [index('groupUrlName')])
         .authorization((allow) => [
-            allow.authenticated().to(['read','create'])
+            allow.authenticated().to(['read','create', 'delete'])
         ]),
         
     GroupMessage: a
@@ -47,8 +47,8 @@ const schema = a.schema({
             userNickname: a.string().required(),
         })
         .authorization((allow) => [
-            allow.owner().to(['read', 'create']),
-            allow.authenticated().to(['read']),
+            allow.owner().to(['read', 'create', 'delete']),
+            allow.authenticated().to(['read', 'delete']),
         ]),
 
     GroupUser: a
@@ -60,7 +60,7 @@ const schema = a.schema({
             userNickname: a.string(),
             email: a.string(),
         })
-        .authorization((allow) => [allow.authenticated().to(['create', 'read'])]),
+        .authorization((allow) => [allow.authenticated().to(['create', 'read', 'delete'])]),
 
     UserIndex: a
         .model({
