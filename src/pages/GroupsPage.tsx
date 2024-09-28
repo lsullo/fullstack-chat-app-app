@@ -13,9 +13,10 @@ const GroupsPage = () => {
   const [groups, setGroups] = useState<Schema['Group']['type'][]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [groupAdded, setGroupAdded] = useState(false);
-  const [emailInput, setEmailInput] = useState(''); // State for email input
-  const [memberEmails, setMemberEmails] = useState<string[]>([]); // State for member emails
-  const [userNickname, setUserNickname] = useState('')
+  const [emailInput, setEmailInput] = useState('');
+  const [memberEmails, setMemberEmails] = useState<string[]>([]);
+  const [userNickname, setUserNickname] = useState('');
+  const [deleteGroupId, setDeleteGroupId] = useState<string | null>(null); // State to manage the delete popup
   const navigate = useNavigate();
   const client = generateClient<Schema>();
 
@@ -39,14 +40,11 @@ const GroupsPage = () => {
     const checkAndCreateUserIndex = async () => {
       if (fetchedUserId && client.models.UserIndex) {
         try {
-          // Check if the UserIndex already exists
           const userIndexResponse = await client.models.UserIndex.list({
             filter: { userId: { eq: fetchedUserId } },
           });
-  
-          // Only create if no existing UserIndex found
+
           if (userIndexResponse.data.length === 0) {
-            // Use a mutex or ensure check and create happen sequentially
             await client.models.UserIndex.create({
               userId: fetchedUserId,
               email: userEmail,
@@ -62,12 +60,12 @@ const GroupsPage = () => {
         }
       }
     };
-  
+
     if (fetchedUserId) {
       checkAndCreateUserIndex();
     }
   }, [fetchedUserId, client.models.UserIndex, userEmail]);
-  
+
   useEffect(() => {
     const fetchUserGroups = async () => {
       if (fetchedUserId && client.models.GroupUser) {
@@ -95,12 +93,10 @@ const GroupsPage = () => {
     fetchUserGroups();
   }, [fetchedUserId, groupAdded]);
 
- 
   const handleEmailInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmailInput(e.target.value);
   };
 
-  
   const handleEmailInputKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && emailInput.trim() !== '') {
       e.preventDefault();
@@ -109,7 +105,6 @@ const GroupsPage = () => {
     }
   };
 
- 
   const handleRemoveEmail = (email: string) => {
     setMemberEmails(memberEmails.filter((e) => e !== email));
   };
@@ -125,7 +120,6 @@ const GroupsPage = () => {
       });
       if (createdGroup) {
         setGroupName('');
-        
         const groupUserResponse = await client.models.GroupUser.create({
           groupId: createdGroup.id,
           userId: fetchedUserId,
@@ -135,33 +129,29 @@ const GroupsPage = () => {
         });
         if (groupUserResponse) setGroups([...groups, createdGroup] as Schema['Group']['type'][]);
 
-        
         for (const email of memberEmails) {
           try {
-            // Fetch user details from UserIndex based on email
             const userIndexResponse = await client.models.UserIndex.list({
               filter: { email: { eq: email } },
             });
-        
+
             if (userIndexResponse.data.length > 0) {
               const user = userIndexResponse.data[0];
-              
-            const existingGroupUserResponse = await client.models.GroupUser.list({
-              filter: {
-                groupId: { eq: createdGroup.id },
-                userId: { eq: user.userId },
-              },
-            });
-
-            // If the user is not already in the group, add them
-              if (existingGroupUserResponse.data.length === 0)
-              await client.models.GroupUser.create({
-                groupId: createdGroup.id,
-                userId: user.userId,
-                email: user.email,
-                role: 'member',
-                userNickname: user.userNickname, // Use the fetched nickname
+              const existingGroupUserResponse = await client.models.GroupUser.list({
+                filter: {
+                  groupId: { eq: createdGroup.id },
+                  userId: { eq: user.userId },
+                },
               });
+
+              if (existingGroupUserResponse.data.length === 0)
+                await client.models.GroupUser.create({
+                  groupId: createdGroup.id,
+                  userId: user.userId,
+                  email: user.email,
+                  role: 'member',
+                  userNickname: user.userNickname,
+                });
             } else {
               console.warn(`User with email ${email} not found in UserIndex`);
             }
@@ -169,9 +159,8 @@ const GroupsPage = () => {
             console.error(`Error adding user with email ${email}:`, error);
           }
         }
-        
 
-        setGroupAdded(true); 
+        setGroupAdded(true);
         navigate(`/groups/${createdGroup.groupUrlName}`);
       } else {
         console.error('Error:', createdGroup);
@@ -179,6 +168,46 @@ const GroupsPage = () => {
     } catch (error) {
       console.error('Error:', error);
     }
+  };
+
+  // Function to handle delete button click, opens the popup
+  const handleDeleteClick = (groupId: string) => {
+    setDeleteGroupId(groupId);
+  };
+
+  // Function to handle actual deletion of the group
+// Function to handle actual deletion of the group and its associated messages
+const handleDeleteGroup = async () => {
+  if (deleteGroupId) {
+    try {
+      // Fetch all messages associated with the group
+      const messagesResponse = await client.models.GroupMessage.list({
+        filter: { groupId: { eq: deleteGroupId } },
+      });
+
+      // Delete each message associated with the group
+      await Promise.all(
+        messagesResponse.data.map((message) =>
+          client.models.GroupMessage.delete({ id: message.id })
+        )
+      );
+
+      // Delete the group itself after deleting its messages
+      await client.models.Group.delete({ id: deleteGroupId });
+
+      // Update the groups state to reflect the deletion
+      setGroups(groups.filter((group) => group.id !== deleteGroupId));
+      setDeleteGroupId(null);
+    } catch (error) {
+      console.error('Error deleting group and its messages:', error);
+    }
+  }
+};
+
+
+  // Function to close the delete confirmation popup
+  const handleCancelDelete = () => {
+    setDeleteGroupId(null);
   };
 
   return (
@@ -228,24 +257,51 @@ const GroupsPage = () => {
         </div>
       )}
       <section>
-        {groups
-          .filter((group) => group !== null)
-          .map((group) => (
-            <article
-              key={group.id}
-              className="bg-accent rounded flex flex-col max-w-screen-md mx-auto p-4"
-            >
-              <Link
-                className="text-2xl text-primary-content"
-                to={`/groups/${group.groupUrlName}`}
+  {groups
+    .filter((group) => group !== null)
+    .map((group) => (
+      <article
+        key={group.id}
+        className="bg-accent rounded flex flex-col max-w-screen-md mx-auto p-4 relative"
+      >
+        <Link
+          className="text-2xl text-primary-content"
+          to={`/groups/${group.groupUrlName}`}
+        >
+          <div className="h-24 flex justify-center items-center">
+            {group.groupname}
+          </div>
+        </Link>
+        {group.adminId === fetchedUserId && ( // Only show the X button if the user is the admin
+          <button
+            className="absolute top-4 right-6 text-2xl text-primary-content"
+            onClick={() => handleDeleteClick(group.id)}
+          >
+            X
+          </button>
+        )}
+      </article>
+    ))}
+</section>
+
+      {deleteGroupId && (
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center">
+          <div className="bg-white p-4 rounded shadow-md">
+            <p>WARNING: This action permanently deletes this chat and all of its existing messages.</p>
+            <div className="flex justify-end mt-4">
+              <button
+                className="btn btn-danger mr-2"
+                onClick={handleDeleteGroup}
               >
-                <div className="h-24 flex justify-center items-center">
-                  {group.groupname}
-                </div>
-              </Link>
-            </article>
-          ))}
-      </section>
+                Yes, Delete
+              </button>
+              <button className="btn btn-secondary" onClick={handleCancelDelete}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 };
