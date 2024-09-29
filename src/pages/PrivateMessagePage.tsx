@@ -41,9 +41,8 @@ const PrivateMessagePage = () => {
   const [fetchedUsers, setFetchedUsers] = useState<string[]>([]);
   const [loadingNicknames, setLoadingNicknames] = useState(true);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
-  const [emailInput, setEmailInput] = useState(''); // State for email input
-  const [memberEmails, setMemberEmails] = useState<string[]>([]); // State for member emails
-  //const [groupAdded, setGroupAdded] = useState(false);
+  const [emailInput, setEmailInput] = useState(''); 
+  const [memberEmails, setMemberEmails] = useState<string[]>([]); 
 
   const openPopup = () => setIsPopupOpen(true);
   const closePopup = () => setIsPopupOpen(false);
@@ -74,14 +73,14 @@ const PrivateMessagePage = () => {
 
     for (const email of memberEmails) {
       try {
-        // Fetch user details from UserIndex based on email
+        
         const userIndexResponse = await client.models.UserIndex.list({
           filter: { email: { eq: email } },
         });
 
         if (userIndexResponse.data.length > 0) {
           const user = userIndexResponse.data[0];
-           // Check if the user is already in the group
+
            const existingGroupUserResponse = await client.models.GroupUser.list({
             filter: {
               groupId: { eq: groupDetails.groupId },
@@ -89,16 +88,14 @@ const PrivateMessagePage = () => {
             },
           });
 
-          // If the user is not already in the group, add them
           if (existingGroupUserResponse.data.length === 0)
 
-          // Create GroupUser with correct user data from the UserIndex
           await client.models.GroupUser.create({
             groupId: groupDetails.groupId,
             userId: user.userId,
             email: user.email,
             role: 'member',
-            userNickname: user.userNickname, // Use the fetched nickname
+            userNickname: user.userNickname, 
           });
         } else {
           console.warn(`User with email ${email} not found in UserIndex`);
@@ -108,7 +105,6 @@ const PrivateMessagePage = () => {
       }
     }
 
-    //setGroupAdded(true);
     navigate(`/groups/${groupDetails?.groupname}`);
     closePopup();
     window.location.reload();
@@ -130,18 +126,15 @@ const PrivateMessagePage = () => {
         try {
           setLoadingNicknames(true);
 
-          // Fetch users based on the current group ID
           const groupUserResponse = await client.models.GroupUser.list({
             filter: { groupId: { eq: groupDetails.groupId } },
           });
           console.log('Fetched Group User Data:', groupUserResponse);
 
-          // Extract nicknames of the users in the group
           const usersList = groupUserResponse.data
             .map((groupUser) => groupUser.userNickname)
             .filter((nickname): nickname is string => nickname !== null && nickname !== undefined);
 
-          // Set the list of usernames
           setFetchedUsers(usersList);
         } catch (error) {
           console.error('Error fetching group users:', error);

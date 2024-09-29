@@ -4,6 +4,8 @@ import { Schema } from '../../amplify/data/resource';
 import { generateClient } from 'aws-amplify/api';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { fetchAuthSession } from 'aws-amplify/auth';
+import { FaSignOutAlt, FaTimes } from 'react-icons/fa'; 
+
 
 const GroupsPage = () => {
   const { user } = useAuthenticator((context) => [context.user]);
@@ -16,7 +18,9 @@ const GroupsPage = () => {
   const [emailInput, setEmailInput] = useState('');
   const [memberEmails, setMemberEmails] = useState<string[]>([]);
   const [userNickname, setUserNickname] = useState('');
-  const [deleteGroupId, setDeleteGroupId] = useState<string | null>(null); // State to manage the delete popup
+  const [deleteGroupId, setDeleteGroupId] = useState<string | null>(null); 
+  const [leaveGroupId, setLeaveGroupId] = useState<string | null>(null); 
+  
   const navigate = useNavigate();
   const client = generateClient<Schema>();
 
@@ -170,19 +174,14 @@ const GroupsPage = () => {
     }
   };
 
-  // Function to handle delete button click, opens the popup
   const handleDeleteClick = (groupId: string) => {
     setDeleteGroupId(groupId);
   };
 
-  // Function to handle actual deletion of the group
-// Function to handle actual deletion of the group and its associated messages
-// Function to handle actual deletion of the group and its associated messages
-// Function to handle actual deletion of the group and its associated messages and users
 const handleDeleteGroup = async () => {
   if (deleteGroupId) {
     try {
-      // Fetch and delete all messages associated with the group
+
       const messagesResponse = await client.models.GroupMessage.list({
         filter: { groupId: { eq: deleteGroupId } },
       });
@@ -202,7 +201,6 @@ const handleDeleteGroup = async () => {
         console.log('No messages found to delete.');
       }
 
-      // Fetch and delete all users associated with the group
       const groupUsersResponse = await client.models.GroupUser.list({
         filter: { groupId: { eq: deleteGroupId } },
       });
@@ -222,13 +220,12 @@ const handleDeleteGroup = async () => {
         console.log('No group users found to delete.');
       }
 
-      // Finally, delete the group itself
       const { errors } = await client.models.Group.delete({ id: deleteGroupId });
       if (errors) {
         console.error(`Error deleting group with ID: ${deleteGroupId}`, errors);
       } else {
         console.log(`Deleted group with ID: ${deleteGroupId}`);
-        // Update the groups state to reflect the deletion in the UI
+
         setGroups(groups.filter((group) => group.id !== deleteGroupId));
         setDeleteGroupId(null);
       }
@@ -238,14 +235,47 @@ const handleDeleteGroup = async () => {
   }
 };
 
-
-
-
-
-  // Function to close the delete confirmation popup
   const handleCancelDelete = () => {
     setDeleteGroupId(null);
   };
+
+  const handleLeaveClick = (groupId: string) => {
+    setLeaveGroupId(groupId);
+  };
+
+  const handleConfirmLeaveGroup = async () => {
+    if (leaveGroupId) {
+      try {
+        const groupUserResponse = await client.models.GroupUser.list({
+          filter: { groupId: { eq: leaveGroupId }, userId: { eq: fetchedUserId } },
+        });
+
+        if (groupUserResponse.data.length > 0) {
+          const groupUser = groupUserResponse.data[0];
+          await client.models.GroupUser.delete({ id: groupUser.id });
+
+          const timestamp = new Date().toISOString();
+          const leaveMessage = `User ${userNickname || userEmail} left group at ${timestamp}`;
+          console.log(leaveMessage); 
+
+          setGroups(groups.filter((group) => group.id !== leaveGroupId));
+          setGroupAdded(!groupAdded);
+        }
+
+        setLeaveGroupId(null);
+        window.location.reload(); 
+      } catch (error) {
+        console.error('Error removing user from group:', error);
+      }
+    }
+  };
+
+
+  const handleCancelLeave = () => {
+    setLeaveGroupId(null);
+  };
+
+
 
   return (
     <>
@@ -293,7 +323,7 @@ const handleDeleteGroup = async () => {
           </div>
         </div>
       )}
-      <section>
+<section>
   {groups
     .filter((group) => group !== null)
     .map((group) => (
@@ -309,13 +339,19 @@ const handleDeleteGroup = async () => {
             {group.groupname}
           </div>
         </Link>
-        {group.adminId === fetchedUserId && ( // Only show the X button if the user is the admin
-          <button
-            className="absolute top-4 right-6 text-2xl text-primary-content"
+        {group.adminId === fetchedUserId ? (
+          <FaTimes
+            className="absolute top-15 right-6 text-3xl text-primary-content"
             onClick={() => handleDeleteClick(group.id)}
-          >
-            X
-          </button>
+          />
+            
+          
+        ) : (
+          <FaSignOutAlt
+            className="absolute top-15 right-6 text-3xl text-primary-content cursor-pointer"
+            onClick={() => handleLeaveClick(group.id)} 
+            title="Leave Group"
+          />
         )}
       </article>
     ))}
@@ -339,6 +375,26 @@ const handleDeleteGroup = async () => {
           </div>
         </div>
       )}
+
+      {leaveGroupId && (
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center">
+          <div className="bg-white p-4 rounded shadow-md">
+            <p>Are you sure you want to leave this group?</p>
+            <div className="flex justify-end mt-4">
+              <button
+                className="btn btn-danger mr-2"
+                onClick={handleConfirmLeaveGroup}
+              >
+                Yes, Leave
+              </button>
+              <button className="btn btn-secondary" onClick={handleCancelLeave}>
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </>
   );
 };
