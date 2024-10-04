@@ -7,6 +7,7 @@ import { useAuthenticator } from '@aws-amplify/ui-react';
 import { uploadData } from 'aws-amplify/storage';
 import { StorageImage } from '@aws-amplify/ui-react-storage';
 import { fetchAuthSession } from 'aws-amplify/auth';
+import { FaSignOutAlt, FaPlus } from 'react-icons/fa'; 
 
 const client = generateClient<Schema>();
 
@@ -31,6 +32,7 @@ const PrivateMessagePage = () => {
   const [groupDetails, setGroupDetails] = useState<{
     groupId: string;
     groupname: string;
+    adminId: string;
   }>();
   const [msgText, setMsgText] = useState('');
   const [msgFile, setMsgFile] = useState<File | null>(null);
@@ -41,11 +43,16 @@ const PrivateMessagePage = () => {
   const [fetchedUsers, setFetchedUsers] = useState<string[]>([]);
   const [loadingNicknames, setLoadingNicknames] = useState(true);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
+  const [isPopup2Open, setIsPopup2Open] = useState(false);
   const [emailInput, setEmailInput] = useState(''); 
   const [memberEmails, setMemberEmails] = useState<string[]>([]); 
 
   const openPopup = () => setIsPopupOpen(true);
   const closePopup = () => setIsPopupOpen(false);
+
+  const openPopup2 = () => setIsPopup2Open(true);
+  const closePopup2 = () => setIsPopup2Open(false);
+
 
   const handleEmailInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmailInput(e.target.value);
@@ -73,7 +80,6 @@ const PrivateMessagePage = () => {
 
     for (const email of memberEmails) {
       try {
-        
         const userIndexResponse = await client.models.UserIndex.list({
           filter: { email: { eq: email } },
         });
@@ -81,22 +87,28 @@ const PrivateMessagePage = () => {
         if (userIndexResponse.data.length > 0) {
           const user = userIndexResponse.data[0];
 
-           const existingGroupUserResponse = await client.models.GroupUser.list({
+          const existingGroupUserResponse = await client.models.GroupUser.list({
             filter: {
               groupId: { eq: groupDetails.groupId },
               userId: { eq: user.userId },
             },
           });
 
-          if (existingGroupUserResponse.data.length === 0)
-
-          await client.models.GroupUser.create({
-            groupId: groupDetails.groupId,
-            userId: user.userId,
-            email: user.email,
-            role: 'member',
-            userNickname: user.userNickname, 
-          });
+          if (existingGroupUserResponse.data.length === 0) {
+            await client.models.GroupUser.create({
+              groupId: groupDetails.groupId,
+              userId: user.userId,
+              email: user.email,
+              role: 'member',
+              userNickname: user.userNickname, 
+            });
+            await client.models.GroupMessage.create({
+              groupId: groupDetails.groupId,
+              type: 'system',
+              content: `${user.userNickname} has been added to the group`,
+              userNickname: user.userNickname ?? "Unknown User",
+            });
+          }
         } else {
           console.warn(`User with email ${email} not found in UserIndex`);
         }
@@ -108,6 +120,36 @@ const PrivateMessagePage = () => {
     navigate(`/groups/${groupDetails?.groupname}`);
     closePopup();
     window.location.reload();
+  };
+
+  const handleLeaveGroup = async (e: FormEvent) => {
+    e.preventDefault();
+
+    if (!groupDetails?.groupId || !fetchedUserId) return;
+  
+    try {
+      const groupUserResponse = await client.models.GroupUser.list({
+        filter: { groupId: { eq: groupDetails.groupId }, userId: { eq: fetchedUserId } },
+      });
+  
+      if (groupUserResponse.data.length > 0) {
+        const groupUser = groupUserResponse.data[0]; 
+  
+        await client.models.GroupUser.delete({ id: groupUser.id });
+  
+        await client.models.GroupMessage.create({
+          groupId: groupDetails.groupId,
+          type: 'system',
+          content: `${userNickname} has left the group`,
+          userNickname: userNickname, 
+        });
+
+        navigate('/groups');
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error leaving group:', error);
+    }
   };
 
   useEffect(() => {
@@ -187,7 +229,7 @@ const PrivateMessagePage = () => {
     client.models.Group.listGroupByGroupUrlName(
       { groupUrlName: groupName },
       {
-        selectionSet: ['id', 'groupname', 'messages.*'],
+        selectionSet: ['id', 'groupname', 'adminId', 'messages.*'],
       }
     ).then(({ data }) => {
       data[0].messages.sort(
@@ -197,6 +239,7 @@ const PrivateMessagePage = () => {
       setGroupDetails({
         groupId: data[0].id,
         groupname: data[0].groupname,
+        adminId: data[0].adminId,
       });
     });
   }, [groupName]);
@@ -248,16 +291,14 @@ const PrivateMessagePage = () => {
       const uploadedItem = await uploadData({
           data: msgFile,
           path: `chat-pics/${msgFile.name}`,
-      }).result
+      }).result;
 
-
-      console.log('the uploaded item', uploadedItem)
       const { data: newMessage } = await client.models.GroupMessage.create({
           groupId: groupDetails?.groupId as string,
           type: 'image',
           picId: uploadedItem.path,
           userNickname,
-      })
+      });
 
       setMsgs((prev) => [...prev, { ...newMessage }] as Schema['GroupMessage']['type'][]);
       setMsgFile(null);
@@ -280,7 +321,7 @@ const PrivateMessagePage = () => {
       <div className="hero min-h-screen bg-base-200">
         <div className="hero-content text-center">
           <div className="max-w-md">
-            <h1 className="text-3xl font-bold text-red-600">Not yo CHAT DumbAsS</h1>
+            <h1 className="text-3xl font-bold text-red-600">Not Authorized</h1>
             <Link to="/" className="btn btn-primary">
               Home
             </Link>
@@ -289,25 +330,47 @@ const PrivateMessagePage = () => {
       </div>
     );
   }
-
+  const renderChatName = () => {
+    if (!groupDetails?.groupname) return null;
+  
+    return (
+      <h1 className="text-2xl font-bold">{groupDetails.groupname}</h1>
+    );
+  };
+  
   return (
     <div className="flex flex-col h-screen">
-      {loadingNicknames ? (
-        <span className="user-nicknames text-primary-content"></span>
-      ) : (
-        <span className="user-nicknames text-primary-content">{fetchedUsers.join(', ')}</span>
-      )}
+      
+      <div className="bg-gray-100 flex justify-between items-center p-4 shadow-md">
+      
+        {loadingNicknames ? (
+          <span className="user-nicknames text-primary-content"></span>
+        ) : (
+          <span className="user-nicknames text-primary-content">{fetchedUsers.join(', ')}</span>
+        )}
+
+      <div className="absolute left-1/2 transform -translate-x-1/2">
+        {renderChatName()}
+      </div>
+        
+        <div className="flex items-center space-x-2">
+    {isUserInGroup && groupDetails?.adminId !== fetchedUserId && (
+      <FaSignOutAlt
+        className="text-red-600 text-xl"
+        onClick={openPopup2}
+      />
+    )}
+   <FaPlus
+        className="text-red-600 text-xl"
+        onClick={openPopup}
+      />
+  </div>
+      </div>
+  
       <div className="flex-1 overflow-y-auto p-6 space-y-4">
-        <button
-          id="openPopupButton"
-          className="btn btn-primary absolute top-30 left-4"
-          onClick={openPopup}
-        >
-          +
-        </button>
 
         {isPopupOpen && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-65 z-50">
             <div className="bg-white p-6 rounded-md shadow-md">
               <h2 className="text-xl mb-4">Add Members</h2>
               <form onSubmit={handleEmailAddSubmit}>
@@ -345,62 +408,95 @@ const PrivateMessagePage = () => {
             </div>
           </div>
         )}
+          {isPopup2Open && (
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-65 z-50">
+      <div className="bg-white p-6 rounded-md shadow-md">
+        <h2 className="text-xl mb-4">Are you sure you want to leave group?</h2>
+        <form onSubmit={handleLeaveGroup}>
+          <div className="flex justify-end space-x-2 mt-4">
+            <button type="button" onClick={closePopup2} className="btn btn-secondary">
+              Cancel
+            </button>
+            <button type="submit" className="btn btn-primary">
+            Leave Group
+          </button>
 
+          </div>
+        </form>
+      </div>
+    </div>
+  )}
+
+  
+        {/* Chat messages */}
         {msgs.map((msg) => (
+  <div
+    key={msg.id}
+    className={clsx(
+      'w-full flex',
+      msg.owner !== user.username ? 'justify-start' : 'justify-end',
+      msg.type === 'system' ? 'justify-center' : ''
+    )}
+  >
+    {msg.type === 'system' ? (
+      <div className="text-gray-500 text-center w-full">
+        <p className="text-sm italic">{msg.content}</p>
+        <time className="text-xs opacity-50">{formatTime(msg.createdAt)}</time>
+      </div>
+    ) : (
+      <>
+        {msg.content && (
           <div
-            key={msg.id}
             className={clsx(
-              'w-full flex',
-              msg.owner !== user.username ? 'justify-start' : 'justify-end'
+              'chat max-w-xl w-1/3',
+              msg.owner !== user.username ? 'chat-start' : 'chat-end'
             )}
           >
-            {msg.content && (
-              <div
-                className={clsx(
-                  'chat max-w-xl w-1/3',
-                  msg.owner !== user.username ? 'chat-start' : 'chat-end'
-                )}
-              >
-                <div className="chat-header">
-                  {msg.userNickname}
-                  <time className="text-xs opacity-50">{formatTime(msg.createdAt)}</time>
-                </div>
-                <p
-                  className={clsx(
-                    'chat-bubble',
-                    msg.owner !== user.username ? 'chat-bubble-accent' : 'chat-bubble-info'
-                  )}
-                >
-                  {msg.content}
-                </p>
-              </div>
-            )}
-            {msg.picId && (
-              <div
-                className={clsx(
-                  'chat max-w-xl w-1/3',
-                  msg.owner !== user.username ? 'chat-start' : 'chat-end'
-                )}
-              >
-                <div className="chat-header">
-                  {msg.userNickname}
-                  <time className="text-xs opacity-50">{formatTime(msg.createdAt)}</time>
-                </div>
-                <StorageImage
-                  path={msg.picId}
-                  alt=""
-                  className={clsx(
-                    'chat-bubble',
-                    msg.owner !== user.username ? 'chat-bubble-accent' : 'chat-bubble-info'
-                  )}
-                />
-              </div>
-            )}
+            <div className="chat-header">
+              {msg.userNickname}
+              <time className="text-xs opacity-50">{formatTime(msg.createdAt)}</time>
+            </div>
+            <p
+              className={clsx(
+                'chat-bubble',
+                msg.owner !== user.username ? 'chat-bubble-accent' : 'chat-bubble-info'
+              )}
+            >
+              {msg.content}
+            </p>
           </div>
-        ))}
+        )}
+        {msg.picId && (
+          <div
+            className={clsx(
+              'chat max-w-xl w-1/3',
+              msg.owner !== user.username ? 'chat-start' : 'chat-end'
+            )}
+          >
+            <div className="chat-header">
+              {msg.userNickname}
+              <time className="text-xs opacity-50">{formatTime(msg.createdAt)}</time>
+            </div>
+            <StorageImage
+              path={msg.picId}
+              alt=""
+              className={clsx(
+                'chat-bubble',
+                msg.owner !== user.username ? 'chat-bubble-accent' : 'chat-bubble-info'
+              )}
+            />
+          </div>
+        )}
+      </>
+    )}
+  </div>
+))}
+
+  
         <div ref={messagesEndRef} />
       </div>
-
+  
+      {/* Message input form */}
       <form onSubmit={handleSubmit} className="bg-info py-4 px-6 flex items-center">
         <input
           className="flex-1 input"
@@ -421,6 +517,6 @@ const PrivateMessagePage = () => {
       </form>
     </div>
   );
-};
+ }
 
 export default PrivateMessagePage;
