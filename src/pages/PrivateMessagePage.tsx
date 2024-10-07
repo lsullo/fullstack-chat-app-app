@@ -74,7 +74,7 @@ const PrivateMessagePage = () => {
     e.preventDefault();
 
     if (!groupDetails?.groupId) {
-      console.warn('Group ID is missing. Cannot add users to the group.');
+      console.warn('Group ID missing.');
       return;
     }
 
@@ -110,10 +110,10 @@ const PrivateMessagePage = () => {
             });
           }
         } else {
-          console.warn(`User with email ${email} not found in UserIndex`);
+          console.warn(`User ${email} not found in user index`);
         }
       } catch (error) {
-        console.error(`Error adding user with email ${email}:`, error);
+        console.error(`Error:`, error);
       }
     }
 
@@ -148,7 +148,7 @@ const PrivateMessagePage = () => {
         window.location.reload();
       }
     } catch (error) {
-      console.error('Error leaving group:', error);
+      console.error('Error:', error);
     }
   };
   
@@ -166,7 +166,7 @@ const PrivateMessagePage = () => {
               setFetchedUsers((prevUsers) => prevUsers.filter(user => user !== groupUser.userNickname));
             }
           },
-          error: (error) => console.error('Error in GroupUser deletion subscription:', error),
+          error: (error) => console.error('Error:', error),
         });
   
         return () => groupUserSub.unsubscribe(); 
@@ -197,7 +197,6 @@ const PrivateMessagePage = () => {
           const groupUserResponse = await client.models.GroupUser.list({
             filter: { groupId: { eq: groupDetails.groupId } },
           });
-          console.log('Fetched Group User Data:', groupUserResponse);
 
           const usersList = groupUserResponse.data
             .map((groupUser) => groupUser.userNickname)
@@ -205,7 +204,7 @@ const PrivateMessagePage = () => {
 
           setFetchedUsers(usersList);
         } catch (error) {
-          console.error('Error fetching group users:', error);
+          console.error('Error:', error);
         } finally {
           setLoadingNicknames(false);
         }
@@ -239,7 +238,7 @@ const PrivateMessagePage = () => {
 
           setLoading(false);
         } catch (error) {
-          console.error('Error fetching group users:', error);
+          console.error('Error:', error);
           setLoading(false);
         }
       }
@@ -310,7 +309,7 @@ useEffect(() => {
     e.preventDefault();
 
     if (!groupDetails?.groupId) {
-      console.warn('Group ID is missing. Cannot send message.');
+      console.warn('Group ID missing. Cant send.');
       return;
     }
 
@@ -533,7 +532,6 @@ useEffect(() => {
         <div ref={messagesEndRef} />
       </div>
   
-      {/* Message input form */}
       <form onSubmit={handleSubmit} className="bg-info py-4 px-6 flex items-center">
         <input
           className="flex-1 input"

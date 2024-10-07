@@ -55,12 +55,9 @@ const GroupsPage = () => {
               role: 'User',
               userNickname,
             });
-            console.log('UserIndex created for new user.');
-          } else {
-            console.log('UserIndex already exists for this user.');
-          }
+          } 
         } catch (error) {
-          console.error('Error during UserIndex creation:', error);
+          console.error('Error:', error);
         }
       }
     };
@@ -114,11 +111,11 @@ useEffect(() => {
                 setGroups((prevGroups) => [...prevGroups, newGroup]);
               }
             } catch (error) {
-              console.error('Error fetching newly added group:', error);
+              console.error('Error:', error);
             }
           }
         },
-        error: (error) => console.error('Subscription error:', error),
+        error: (error) => console.error('Error:', error),
       });
 
       return () => groupUserSub.unsubscribe(); 
@@ -140,7 +137,7 @@ useEffect(() => {
             setGroups((prevGroups) => prevGroups.filter(group => group.id !== groupUser.groupId));
           }
         },
-        error: (error) => console.error('Subscription deletion error:', error),
+        error: (error) => console.error('Error:', error),
       });
 
       return () => groupUserDeleteSub.unsubscribe(); 
@@ -222,10 +219,10 @@ useEffect(() => {
                   userNickname: user.userNickname,
                 });
             } else {
-              console.warn(`User with email ${email} not found in UserIndex`);
+              console.warn(`${email} not found in the user index.`);
             }
           } catch (error) {
-            console.error(`Error adding user with email ${email}:`, error);
+            console.error(`Error:`, error);
           }
         }
 
@@ -259,16 +256,11 @@ const handleDeleteGroup = async () => {
           messagesResponse.data.map(async (message) => {
             const { errors } = await client.models.GroupMessage.delete({ id: message.id });
             if (errors) {
-              console.error(`Error deleting message with ID: ${message.id}`, errors);
-            } else {
-              console.log(`Deleted message with ID: ${message.id}`);
-            }
+              console.error(`Error:`, errors);
+            } 
           })
         );
-      } else {
-        console.log('No messages found to delete.');
-      }
-
+      } 
       const groupUsersResponse = await client.models.GroupUser.list({
         filter: { groupId: { eq: deleteGroupId } },
       });
@@ -278,27 +270,24 @@ const handleDeleteGroup = async () => {
           groupUsersResponse.data.map(async (user) => {
             const { errors } = await client.models.GroupUser.delete({ id: user.id });
             if (errors) {
-              console.error(`Error deleting group user with ID: ${user.id}`, errors);
-            } else {
-              console.log(`Deleted group user with ID: ${user.id}`);
-            }
+              console.error(`Error:`, errors);
+            } 
           })
         );
-      } else {
-        console.log('No group users found to delete.');
-      }
+      } 
+
 
       const { errors } = await client.models.Group.delete({ id: deleteGroupId });
+
       if (errors) {
-        console.error(`Error deleting group with ID: ${deleteGroupId}`, errors);
+        console.error(`Error:`, errors);
       } else {
-        console.log(`Deleted group with ID: ${deleteGroupId}`);
 
         setGroups(groups.filter((group) => group.id !== deleteGroupId));
         setDeleteGroupId(null);
       }
     } catch (error) {
-      console.error('Error deleting group and its associated data:', error);
+      console.error('Error:', error);
     }
   }
 };
@@ -323,8 +312,8 @@ const handleDeleteGroup = async () => {
           await client.models.GroupUser.delete({ id: groupUser.id });
 
           const timestamp = new Date().toISOString();
-          const leaveMessage = `User ${userNickname || userEmail} left group at ${timestamp}`;
-          console.log(leaveMessage); 
+          const leaveMessage = `User ${userNickname || userEmail} left group at ${timestamp}`;//this needs to be changed to an actual groupmessage
+          console.log(leaveMessage); //should be easy because backend api is listening
 
           setGroups(groups.filter((group) => group.id !== leaveGroupId));
           setGroupAdded(!groupAdded);
@@ -333,7 +322,7 @@ const handleDeleteGroup = async () => {
         setLeaveGroupId(null);
         window.location.reload(); 
       } catch (error) {
-        console.error('Error removing user from group:', error);
+        console.error('Error:', error);
       }
     }
   };
