@@ -151,6 +151,32 @@ const PrivateMessagePage = () => {
       console.error('Error leaving group:', error);
     }
   };
+  
+  useEffect(() => {
+    const subscribeToUserLeave = () => {
+      if (groupDetails?.groupId) {
+        const groupUserSub = client.models.GroupUser.onDelete({
+          filter: {
+            groupId: { eq: groupDetails.groupId },
+          },
+        }).subscribe({
+          next: async (groupUser) => {
+            if (groupUser && groupUser.userNickname) {
+              
+              setFetchedUsers((prevUsers) => prevUsers.filter(user => user !== groupUser.userNickname));
+            }
+          },
+          error: (error) => console.error('Error in GroupUser deletion subscription:', error),
+        });
+  
+        return () => groupUserSub.unsubscribe(); 
+      }
+    };
+  
+    const unsubscribe = subscribeToUserLeave();
+    return unsubscribe;
+  }, [groupDetails?.groupId]);
+  
 
   useEffect(() => {
     if (user) {
@@ -250,17 +276,29 @@ const PrivateMessagePage = () => {
     });
   }, []);
 
-  useEffect(() => {
-    const sub = client.models.GroupMessage.onCreate().subscribe({
-      next: (data) => {
-        if (data.groupId === groupDetails?.groupId && data.owner !== user.username) {
-          setMsgs((prev) => [...prev, { ...data }]);
-        }
-      },
-      error: (error) => console.warn(error),
-    });
-    return () => sub.unsubscribe();
-  }, [user.username, groupDetails?.groupId]);
+useEffect(() => {
+  const subscribeToGroupMessages = () => {
+    if (groupDetails?.groupId) {
+      const sub = client.models.GroupMessage.onCreate({
+        filter: {
+          groupId: { eq: groupDetails.groupId }, 
+        },
+      }).subscribe({
+        next: (data) => {
+          setMsgs((prev) => [...prev, { ...data }]); 
+        },
+        error: (error) => console.warn(error),
+      });
+
+      return () => sub.unsubscribe(); 
+    }
+  };
+
+  const unsubscribe = subscribeToGroupMessages();
+  return unsubscribe;
+}, [groupDetails?.groupId]);
+
+
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -277,13 +315,13 @@ const PrivateMessagePage = () => {
     }
 
     if (msgText) {
-      const { data: newMessage } = await client.models.GroupMessage.create({
+      await client.models.GroupMessage.create({
         groupId: groupDetails?.groupId as string,
         type: 'text',
         content: msgText,
         userNickname,
       });
-      setMsgs((prev) => [...prev, { ...newMessage }] as Schema['GroupMessage']['type'][]);
+
       setMsgText('');
     }
 
@@ -293,14 +331,13 @@ const PrivateMessagePage = () => {
           path: `chat-pics/${msgFile.name}`,
       }).result;
 
-      const { data: newMessage } = await client.models.GroupMessage.create({
+      await client.models.GroupMessage.create({
           groupId: groupDetails?.groupId as string,
           type: 'image',
           picId: uploadedItem.path,
           userNickname,
       });
 
-      setMsgs((prev) => [...prev, { ...newMessage }] as Schema['GroupMessage']['type'][]);
       setMsgFile(null);
       if (fileInputRef.current) {
         fileInputRef.current.value = '';

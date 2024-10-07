@@ -20,7 +20,7 @@ const GroupsPage = () => {
   const [userNickname, setUserNickname] = useState('');
   const [deleteGroupId, setDeleteGroupId] = useState<string | null>(null); 
   const [leaveGroupId, setLeaveGroupId] = useState<string | null>(null); 
-  
+
   const navigate = useNavigate();
   const client = generateClient<Schema>();
 
@@ -97,6 +97,60 @@ const GroupsPage = () => {
     fetchUserGroups();
   }, [fetchedUserId, groupAdded]);
 
+useEffect(() => {
+  const subscribeToGroupUserCreation = () => {
+    if (fetchedUserId && client.models.GroupUser) {
+      const groupUserSub = client.models.GroupUser.onCreate({
+        filter: {
+          userId: { eq: fetchedUserId },
+        },
+      }).subscribe({
+        next: async (groupUser) => {
+          if (groupUser && groupUser.groupId) {
+            try {
+              const groupResponse = await client.models.Group.get({ id: groupUser.groupId });
+              if (groupResponse?.data) {
+                const newGroup = groupResponse.data as Schema['Group']['type']; 
+                setGroups((prevGroups) => [...prevGroups, newGroup]);
+              }
+            } catch (error) {
+              console.error('Error fetching newly added group:', error);
+            }
+          }
+        },
+        error: (error) => console.error('Subscription error:', error),
+      });
+
+      return () => groupUserSub.unsubscribe(); 
+    }
+  };
+
+  const unsubscribe = subscribeToGroupUserCreation();
+  return unsubscribe;
+}, [fetchedUserId, client.models.GroupUser]);
+
+useEffect(() => {
+  const subscribeToGroupUserDeletion = () => {
+    if (fetchedUserId && client.models.GroupUser) {
+      const groupUserDeleteSub = client.models.GroupUser.onDelete({
+        filter: { userId: { eq: fetchedUserId } },
+      }).subscribe({
+        next: (groupUser) => {
+          if (groupUser && groupUser.groupId) {
+            setGroups((prevGroups) => prevGroups.filter(group => group.id !== groupUser.groupId));
+          }
+        },
+        error: (error) => console.error('Subscription deletion error:', error),
+      });
+
+      return () => groupUserDeleteSub.unsubscribe(); 
+    }
+  };
+
+  const unsubscribe = subscribeToGroupUserDeletion();
+  return unsubscribe;
+}, [fetchedUserId, client.models.GroupUser]);
+
   const handleEmailInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmailInput(e.target.value);
   };
@@ -113,8 +167,19 @@ const GroupsPage = () => {
     setMemberEmails(memberEmails.filter((e) => e !== email));
   };
 
+
+
   const handleCreateGroupSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
+    setIsLoading(true);
+    
+      if (emailInput.trim() !== '') {
+        setMemberEmails((prevEmails) => [...prevEmails, emailInput.trim()]);
+        setEmailInput(''); 
+      }
+
+      const updatedMemberEmails = [...memberEmails, emailInput.trim()];
+
     const groupUrlName = groupName.toLowerCase().replace(/\s/g, '-');
     try {
       const { data: createdGroup } = await client.models.Group.create({
@@ -133,7 +198,7 @@ const GroupsPage = () => {
         });
         if (groupUserResponse) setGroups([...groups, createdGroup] as Schema['Group']['type'][]);
 
-        for (const email of memberEmails) {
+        for (const email of updatedMemberEmails) {
           try {
             const userIndexResponse = await client.models.UserIndex.list({
               filter: { email: { eq: email } },
@@ -171,6 +236,9 @@ const GroupsPage = () => {
       }
     } catch (error) {
       console.error('Error:', error);
+    }
+    finally {
+      setIsLoading(false); 
     }
   };
 
@@ -277,12 +345,19 @@ const handleDeleteGroup = async () => {
 
 
 
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <h1 className="text-2xl">Checking Authorization...</h1>
+      </div>
+    );
+  }
+
   return (
+    
     <>
       <h1 className="text-3xl text-center mt-12">Group Chat Rooms</h1>
-      {isLoading ? (
-        <div className="text-center">Loading...</div>
-      ) : (
+      
         <div className="my-8 w-full">
           <div className="flex flex-col items-center">
             <form onSubmit={handleCreateGroupSubmit}>
@@ -322,7 +397,7 @@ const handleDeleteGroup = async () => {
             </form>
           </div>
         </div>
-      )}
+      
 <section>
   {groups
     .filter((group) => group !== null)
