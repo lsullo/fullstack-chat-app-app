@@ -185,6 +185,7 @@ useEffect(() => {
         adminId: fetchedUserId,
       });
       if (createdGroup) {
+        
         setGroupName('');
         const groupUserResponse = await client.models.GroupUser.create({
           groupId: createdGroup.id,
@@ -303,29 +304,42 @@ const handleDeleteGroup = async () => {
   const handleConfirmLeaveGroup = async () => {
     if (leaveGroupId) {
       try {
+        const groupResponse = await client.models.Group.get({ id: leaveGroupId });
+        const groupDetails = groupResponse?.data;
+  
+        if (!groupDetails) {
+          console.error('Group details not found');
+          return;
+        }
+
         const groupUserResponse = await client.models.GroupUser.list({
           filter: { groupId: { eq: leaveGroupId }, userId: { eq: fetchedUserId } },
         });
-
+  
         if (groupUserResponse.data.length > 0) {
           const groupUser = groupUserResponse.data[0];
-          await client.models.GroupUser.delete({ id: groupUser.id });
 
-          const timestamp = new Date().toISOString();
-          const leaveMessage = `User ${userNickname || userEmail} left group at ${timestamp}`;//this needs to be changed to an actual groupmessage
-          console.log(leaveMessage); //should be easy because backend api is listening
+          await client.models.GroupUser.delete({ id: groupUser.id });
+  
+          await client.models.GroupMessage.create({
+            groupId: groupDetails.id, 
+            type: 'system',
+            content: `${userNickname} has left the group`,
+            userNickname: userNickname, 
+          });
 
           setGroups(groups.filter((group) => group.id !== leaveGroupId));
           setGroupAdded(!groupAdded);
         }
-
+  
         setLeaveGroupId(null);
-        window.location.reload(); 
+        window.location.reload();
       } catch (error) {
         console.error('Error:', error);
       }
     }
   };
+  
 
 
   const handleCancelLeave = () => {

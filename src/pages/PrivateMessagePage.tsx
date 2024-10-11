@@ -77,16 +77,22 @@ const PrivateMessagePage = () => {
       console.warn('Group ID missing.');
       return;
     }
-
-    for (const email of memberEmails) {
+ 
+    if (emailInput.trim() !== '') {
+      setMemberEmails((prevEmails) => [...prevEmails, emailInput.trim()]);
+      setEmailInput(''); 
+    }
+    const updatedMemberEmails = [...memberEmails, emailInput.trim()];
+  
+    for (const email of updatedMemberEmails) {
       try {
+
         const userIndexResponse = await client.models.UserIndex.list({
           filter: { email: { eq: email } },
         });
-
+  
         if (userIndexResponse.data.length > 0) {
           const user = userIndexResponse.data[0];
-
           const existingGroupUserResponse = await client.models.GroupUser.list({
             filter: {
               groupId: { eq: groupDetails.groupId },
@@ -100,27 +106,29 @@ const PrivateMessagePage = () => {
               userId: user.userId,
               email: user.email,
               role: 'member',
-              userNickname: user.userNickname, 
+              userNickname: user.userNickname,
             });
+
             await client.models.GroupMessage.create({
               groupId: groupDetails.groupId,
               type: 'system',
               content: `${user.userNickname} has been added to the group`,
-              userNickname: user.userNickname ?? "Unknown User",
+              userNickname: user.userNickname ?? 'Unknown User',
             });
           }
         } else {
-          console.warn(`User ${email} not found in user index`);
+          console.warn(`User with email ${email} not found in UserIndex.`);
         }
       } catch (error) {
-        console.error(`Error:`, error);
+        console.error(`Error adding user ${email} to group:`, error);
       }
     }
-
+  
     navigate(`/groups/${groupDetails?.groupname}`);
     closePopup();
     window.location.reload();
   };
+  
 
   const handleLeaveGroup = async (e: FormEvent) => {
     e.preventDefault();
