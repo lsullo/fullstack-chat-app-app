@@ -24,11 +24,10 @@ function formatTime(dateString: string): string {
 const PrivateMessagePage = () => {
   const { user } = useAuthenticator((context) => [context.user]);
   const [userNickname, setUserNickname] = useState('');
-  const { groupName } = useParams();
+  const { groupID } = useParams();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const navigate = useNavigate();
-
   const [groupDetails, setGroupDetails] = useState<{
     groupId: string;
     groupname: string;
@@ -124,7 +123,7 @@ const PrivateMessagePage = () => {
       }
     }
   
-    navigate(`/groups/${groupDetails?.groupname}`);
+    navigate(`/groups/${groupDetails?.groupId}`);
     closePopup();
     window.location.reload();
   };
@@ -258,9 +257,9 @@ const PrivateMessagePage = () => {
   }, [groupDetails, fetchedUserId]);
 
   useEffect(() => {
-    if (!groupName) return;
+    if (!groupID) return;
     client.models.Group.listGroupByGroupUrlName(
-      { groupUrlName: groupName },
+      { groupUrlName: groupID },
       {
         selectionSet: ['id', 'groupname', 'adminId', 'messages.*'],
       }
@@ -275,7 +274,8 @@ const PrivateMessagePage = () => {
         adminId: data[0].adminId,
       });
     });
-  }, [groupName]);
+  }, [groupID]);
+
 
   useEffect(() => {
     fetchAuthSession().then((user2) => {

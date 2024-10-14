@@ -22,7 +22,7 @@ const router = createBrowserRouter([
             element: <GroupsPage />,
           },
           {
-            path: 'groups/:groupName',
+            path: 'groups/:groupID',
             element: <PrivateMessagePage />,
           },
           {

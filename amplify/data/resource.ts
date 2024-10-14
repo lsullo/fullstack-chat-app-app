@@ -11,7 +11,7 @@ const schema = a.schema({
         })
         .secondaryIndexes((index) => [index('groupUrlName')])
         .authorization((allow) => [
-            allow.authenticated().to(['read','create', 'delete'])
+            allow.authenticated().to(['read','create','update', 'delete'])
         ]),
         
     GroupMessage: a

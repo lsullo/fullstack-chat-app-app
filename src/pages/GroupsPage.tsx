@@ -169,14 +169,14 @@ useEffect(() => {
   const handleCreateGroupSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setIsLoading(true);
-    
-      if (emailInput.trim() !== '') {
-        setMemberEmails((prevEmails) => [...prevEmails, emailInput.trim()]);
-        setEmailInput(''); 
-      }
-
-      const updatedMemberEmails = [...memberEmails, emailInput.trim()];
-
+  
+    if (emailInput.trim() !== '') {
+      setMemberEmails((prevEmails) => [...prevEmails, emailInput.trim()]);
+      setEmailInput('');
+    }
+  
+    const updatedMemberEmails = [...memberEmails, emailInput.trim()];
+  
     const groupUrlName = groupName.toLowerCase().replace(/\s/g, '-');
     try {
       const { data: createdGroup } = await client.models.Group.create({
@@ -184,61 +184,83 @@ useEffect(() => {
         groupUrlName,
         adminId: fetchedUserId,
       });
+  
+      // Check what data is being returned for the created group
+      console.log('Created Group Data:', createdGroup);
+  
       if (createdGroup) {
-        
-        setGroupName('');
-        const groupUserResponse = await client.models.GroupUser.create({
-          groupId: createdGroup.id,
-          userId: fetchedUserId,
-          email: userEmail,
-          role: 'admin',
-          userNickname,
+        const { data: updatedGroup } = await client.models.Group.update({
+          id: createdGroup.id,
+          groupUrlName: createdGroup.id, // Using the group's ID as URL name
         });
-        if (groupUserResponse) setGroups([...groups, createdGroup] as Schema['Group']['type'][]);
-
-        for (const email of updatedMemberEmails) {
-          try {
-            const userIndexResponse = await client.models.UserIndex.list({
-              filter: { email: { eq: email } },
-            });
-
-            if (userIndexResponse.data.length > 0) {
-              const user = userIndexResponse.data[0];
-              const existingGroupUserResponse = await client.models.GroupUser.list({
-                filter: {
-                  groupId: { eq: createdGroup.id },
-                  userId: { eq: user.userId },
-                },
-              });
-
-              if (existingGroupUserResponse.data.length === 0)
-                await client.models.GroupUser.create({
-                  groupId: createdGroup.id,
-                  userId: user.userId,
-                  email: user.email,
-                  role: 'member',
-                  userNickname: user.userNickname,
-                });
-            } else {
-              console.warn(`${email} not found in the user index.`);
-            }
-          } catch (error) {
-            console.error(`Error:`, error);
+  
+        // Check what data is being returned for the updated group
+        console.log('Updated Group Data:', updatedGroup);
+  
+        if (updatedGroup) {
+          setGroupName('');
+          const groupUserResponse = await client.models.GroupUser.create({
+            groupId: createdGroup.id,
+            userId: fetchedUserId,
+            email: userEmail,
+            role: 'admin',
+            userNickname,
+          });
+  
+          if (groupUserResponse) {
+            console.log('Group User Created:', groupUserResponse);
+            setGroups([...groups, createdGroup] as Schema['Group']['type'][]);
           }
+  
+          for (const email of updatedMemberEmails) {
+            try {
+              const userIndexResponse = await client.models.UserIndex.list({
+                filter: { email: { eq: email } },
+              });
+  
+              if (userIndexResponse.data.length > 0) {
+                const user = userIndexResponse.data[0];
+                const existingGroupUserResponse = await client.models.GroupUser.list({
+                  filter: {
+                    groupId: { eq: createdGroup.id },
+                    userId: { eq: user.userId },
+                  },
+                });
+  
+                if (existingGroupUserResponse.data.length === 0) {
+                  await client.models.GroupUser.create({
+                    groupId: createdGroup.id,
+                    userId: user.userId,
+                    email: user.email,
+                    role: 'member',
+                    userNickname: user.userNickname,
+                  });
+                }
+              } else {
+                console.warn(`${email} not found in the user index.`);
+              }
+            } catch (error) {
+              console.error(`Error:`, error);
+            }
+          }
+  
+          setGroupAdded(true);
+          navigate(`/groups/${updatedGroup?.groupUrlName}`); //updatedGroup?
+        } else {
+          console.error('Error updating group:', updatedGroup);
         }
-
-        setGroupAdded(true);
-        navigate(`/groups/${createdGroup.groupUrlName}`);
       } else {
-        console.error('Error:', createdGroup);
+        console.error('Error creating group:', createdGroup);
       }
     } catch (error) {
       console.error('Error:', error);
-    }
-    finally {
-      setIsLoading(false); 
+    } finally {
+      setIsLoading(false);
     }
   };
+  
+ 
+  
 
   const handleDeleteClick = (groupId: string) => {
     setDeleteGroupId(groupId);
@@ -351,7 +373,7 @@ const handleDeleteGroup = async () => {
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-screen">
-        <h1 className="text-2xl">Checking Authorization...</h1>
+        <h1 className="text-2xl">Loading...</h1>
       </div>
     );
   }
