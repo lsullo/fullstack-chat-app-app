@@ -268,6 +268,7 @@ useEffect(() => {
 
 const handleDeleteGroup = async () => {
   if (deleteGroupId) {
+ 
     try {
 
       const messagesResponse = await client.models.GroupMessage.list({
@@ -299,8 +300,8 @@ const handleDeleteGroup = async () => {
         );
       } 
 
-
       const { errors } = await client.models.Group.delete({ id: deleteGroupId });
+      
 
       if (errors) {
         console.error(`Error:`, errors);

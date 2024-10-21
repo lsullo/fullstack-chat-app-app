@@ -41,6 +41,7 @@ const PrivateMessagePage = () => {
   const [loading, setLoading] = useState(true);
   const [fetchedUsers, setFetchedUsers] = useState<string[]>([]);
   const [loadingNicknames, setLoadingNicknames] = useState(true);
+  const [groupNotFound, setGroupNotFound] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isPopup2Open, setIsPopup2Open] = useState(false);
   const [emailInput, setEmailInput] = useState(''); 
@@ -171,6 +172,12 @@ const PrivateMessagePage = () => {
             if (groupUser && groupUser.userNickname) {
               
               setFetchedUsers((prevUsers) => prevUsers.filter(user => user !== groupUser.userNickname));
+              const updatedUsersList = fetchedUsers.filter(user => user !== groupUser.userNickname);
+            
+            if (updatedUsersList.length === 0) {
+              // If no users are left, refresh the page
+              window.location.reload();
+            }
             }
           },
           error: (error) => console.error('Error:', error),
@@ -264,6 +271,13 @@ const PrivateMessagePage = () => {
         selectionSet: ['id', 'groupname', 'adminId', 'messages.*'],
       }
     ).then(({ data }) => {
+
+      if (data.length === 0) {
+        setGroupNotFound(true); // Set groupNotFound to true
+        setLoading(false);
+        return; // Exit early since no group exists
+      }
+
       data[0].messages.sort(
         (a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
       );
@@ -297,13 +311,14 @@ useEffect(() => {
         error: (error) => console.warn(error),
       });
 
-      return () => sub.unsubscribe(); 
+      return () => sub.unsubscribe();
     }
   };
 
   const unsubscribe = subscribeToGroupMessages();
   return unsubscribe;
 }, [groupDetails?.groupId]);
+
 
 
 
@@ -356,6 +371,22 @@ useEffect(() => {
     return (
       <div className="flex justify-center items-center h-screen">
         <h1 className="text-2xl">Checking Authorization...</h1>
+      </div>
+    );
+  }
+
+  if (groupNotFound) {
+    return (
+      <div className="hero min-h-screen bg-base-200">
+        <div className="hero-content text-center">
+          <div className="max-w-md">
+            <h1 className="text-3xl font-bold text-red-600">Group Does Not Exist</h1>
+            <p>The group you are trying to access does not exist or may have been deleted.</p>
+            <Link to="/" className="btn btn-primary mt-4">
+              Return Home
+            </Link>
+          </div>
+        </div>
       </div>
     );
   }
@@ -498,7 +529,7 @@ useEffect(() => {
           >
             <div className="chat-header">
               {msg.userNickname}
-              <time className="text-xs opacity-50">{formatTime(msg.createdAt)}</time>
+              <time className="text-xs opacity-50"> {formatTime(msg.createdAt)}</time>
             </div>
             <p
               className={clsx(
