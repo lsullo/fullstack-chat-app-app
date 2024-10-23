@@ -185,17 +185,14 @@ useEffect(() => {
         adminId: fetchedUserId,
       });
   
-      // Check what data is being returned for the created group
+      
       console.log('Created Group Data:', createdGroup);
   
       if (createdGroup) {
         const { data: updatedGroup } = await client.models.Group.update({
           id: createdGroup.id,
-          groupUrlName: createdGroup.id, // Using the group's ID as URL name
+          groupUrlName: createdGroup.id, 
         });
-  
-        // Check what data is being returned for the updated group
-        console.log('Updated Group Data:', updatedGroup);
   
         if (updatedGroup) {
           setGroupName('');
@@ -245,7 +242,7 @@ useEffect(() => {
           }
   
           setGroupAdded(true);
-          navigate(`/groups/${updatedGroup?.groupUrlName}`); //updatedGroup?
+          navigate(`/groups/${updatedGroup?.groupUrlName}`); 
         } else {
           console.error('Error updating group:', updatedGroup);
         }

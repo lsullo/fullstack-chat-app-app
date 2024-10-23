@@ -52,8 +52,22 @@ const PrivateMessagePage = () => {
 
   const openPopup2 = () => setIsPopup2Open(true);
   const closePopup2 = () => setIsPopup2Open(false);
-
-
+  
+  const [isOverLimit, setIsOverLimit] = useState(false);
+  const [shake, setShake] = useState(false);
+  const shakeAnimation = {
+    animation: 'shake 0.5s',
+  };
+  
+  const inputStyles = {
+    border: '1px solid',
+    borderColor: 'transparent',
+  };
+  
+  const errorStyles = {
+    borderColor: 'red',
+  };
+  
   const handleEmailInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmailInput(e.target.value);
   };
@@ -175,7 +189,6 @@ const PrivateMessagePage = () => {
               const updatedUsersList = fetchedUsers.filter(user => user !== groupUser.userNickname);
             
             if (updatedUsersList.length === 0) {
-              // If no users are left, refresh the page
               window.location.reload();
             }
             }
@@ -273,9 +286,9 @@ const PrivateMessagePage = () => {
     ).then(({ data }) => {
 
       if (data.length === 0) {
-        setGroupNotFound(true); // Set groupNotFound to true
+        setGroupNotFound(true); 
         setLoading(false);
-        return; // Exit early since no group exists
+        return; 
       }
 
       data[0].messages.sort(
@@ -330,6 +343,17 @@ useEffect(() => {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    
+    if (msgText.length > 500) {
+      setIsOverLimit(true); 
+      setShake(true); 
+      setTimeout(() => {
+        setShake(false); 
+        setIsOverLimit(false); 
+    }, 500); 
+      return; 
+    }
+    setIsOverLimit(false);
 
     if (!groupDetails?.groupId) {
       console.warn('Group ID missing. Cant send.');
@@ -502,6 +526,19 @@ useEffect(() => {
     </div>
   )}
 
+
+<style>
+  {`
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      50% { transform: translateX(5px); }
+      75% { transform: translateX(-5px); }
+    }
+  `}
+</style>
+
+
   
         {/* Chat messages */}
         {msgs.map((msg) => (
@@ -572,13 +609,19 @@ useEffect(() => {
       </div>
   
       <form onSubmit={handleSubmit} className="bg-info py-4 px-6 flex items-center">
-        <input
-          className="flex-1 input"
-          placeholder="Type your message..."
-          type="text"
-          value={msgText}
-          onChange={(e) => setMsgText(e.target.value)}
-        />
+            <input
+        className={clsx('flex-1 input')}
+        style={{
+          ...inputStyles, 
+          ...(isOverLimit ? errorStyles : {}),
+          ...(shake ? shakeAnimation : {}),
+        }}
+        placeholder="Type your message..."
+        type="text"
+        value={msgText}
+        onChange={(e) => setMsgText(e.target.value)}
+      />
+
         <input
           type="file"
           ref={fileInputRef}
