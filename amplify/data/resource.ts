@@ -53,7 +53,7 @@ const schema = a.schema({
 export type Schema = ClientSchema<typeof schema>
 
 export const data = defineData({
-    name: 'luke-chat',
+    name: 'billionaire-luke-chat',
     schema,
     authorizationModes: {
         defaultAuthorizationMode: 'userPool',

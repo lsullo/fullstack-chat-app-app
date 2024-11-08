@@ -7,7 +7,7 @@ import { useAuthenticator } from '@aws-amplify/ui-react';
 import { uploadData } from 'aws-amplify/storage';
 import { StorageImage } from '@aws-amplify/ui-react-storage';
 import { fetchAuthSession } from 'aws-amplify/auth';
-import { FaSignOutAlt, FaPlus } from 'react-icons/fa'; 
+import { FaSignOutAlt, FaPlus, FaUserSecret } from 'react-icons/fa'; 
 
 const client = generateClient<Schema>();
 
@@ -463,6 +463,11 @@ useEffect(() => {
         className="text-red-600 text-xl"
         onClick={openPopup}
       />
+      <a href= "https://buy.stripe.com/test_3csg0G51Y8MVfeMeUU" className = "text-yellow-600 text-xl">
+      <FaUserSecret/>
+      </a>
+        
+      
   </div>
       </div>
   
@@ -495,7 +500,7 @@ useEffect(() => {
                     </div>
                   ))}
                 </div>
-                <div className="flex justify-end space-x-2 mt-4">
+                <div className="flex justify-center space-x-2 mt-4">
                   <button type="button" onClick={closePopup} className="btn btn-secondary">
                     Cancel
                   </button>
@@ -512,7 +517,7 @@ useEffect(() => {
       <div className="bg-white p-6 rounded-md shadow-md">
         <h2 className="text-xl mb-4">Are you sure you want to leave group?</h2>
         <form onSubmit={handleLeaveGroup}>
-          <div className="flex justify-end space-x-2 mt-4">
+          <div className="flex justify-center space-x-2 mt-4">
             <button type="button" onClick={closePopup2} className="btn btn-secondary">
               Cancel
             </button>
@@ -538,8 +543,6 @@ useEffect(() => {
   `}
 </style>
 
-
-  
         {/* Chat messages */}
         {msgs.map((msg) => (
   <div
@@ -604,7 +607,6 @@ useEffect(() => {
   </div>
 ))}
 
-  
         <div ref={messagesEndRef} />
       </div>
   
