@@ -12,7 +12,6 @@ const Hero = () => {
 					<Link to="/groups" className="btn btn-primary" style={{ marginLeft: '10px' }}>
 						Group Chats
 					</Link>
-					
 				</div>
 			</div>
 		</div>

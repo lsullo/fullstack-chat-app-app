@@ -5,6 +5,7 @@ import ProtectedLayout from './layouts/ProtectedLayout';
 import HomePage from './pages/HomePage';
 import GroupsPage from './pages/GroupsPage';
 import PrivateMessagePage from './pages/PrivateMessagePage';
+import PaymentSuccess from './pages/PaymentSuccess';
 
 const router = createBrowserRouter([
   {
@@ -28,6 +29,10 @@ const router = createBrowserRouter([
           {
             path: 'groups/create',
             element: <GroupsPage />, 
+          },
+          {
+            path: '/paymentsuccess', // Add the PaymentSuccess route
+            element: <PaymentSuccess />,
           },
         ],
       },
