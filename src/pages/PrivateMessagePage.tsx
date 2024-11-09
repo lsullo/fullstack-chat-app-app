@@ -46,6 +46,8 @@ const PrivateMessagePage = () => {
   const [isPopup2Open, setIsPopup2Open] = useState(false);
   const [emailInput, setEmailInput] = useState(''); 
   const [memberEmails, setMemberEmails] = useState<string[]>([]); 
+  const currentUrl = window.location.href;
+  const paymentLink = `https://buy.stripe.com/test_5kA28o5TpeLY9peeUU?return_url=${encodeURIComponent(currentUrl)}`;
 
   const openPopup = () => setIsPopupOpen(true);
   const closePopup = () => setIsPopupOpen(false);
@@ -463,7 +465,7 @@ useEffect(() => {
         className="text-red-600 text-xl"
         onClick={openPopup}
       />
-      <a href= "https://buy.stripe.com/test_5kA28o5TpeLY9peeUU" className = "text-yellow-600 text-xl">
+      <a href= {paymentLink} className = "text-yellow-600 text-xl">
       <FaUserSecret/>
       </a>
         
