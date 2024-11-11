@@ -13,7 +13,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       statusCode: 400,
       headers: {
         'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': '*', // Allow CORS for any origin
+        'Access-Control-Allow-Origin': 'https://main.ddn92qjed4i9g.amplifyapp.com',
       },
       body: JSON.stringify({ error: 'Missing checkout session ID' }),
     };
