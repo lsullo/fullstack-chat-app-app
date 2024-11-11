@@ -11,7 +11,7 @@ const PaymentSuccess = () => {
 
   useEffect(() => {
     if (sessionId) {
-      fetch(`https://slb2a881d1.execute-api.us-east-2.amazonaws.com/get-checkout-session?checkout_session_id=${sessionId}`)
+      fetch(`https://slb2a881d1.execute-api.us-east-2.amazonaws.com/$default/get-checkout-session?checkout_session_id=${sessionId}`)
         .then((response) => response.json())
         .then((data) => {
           setClientReferenceId(data.client_reference_id);
