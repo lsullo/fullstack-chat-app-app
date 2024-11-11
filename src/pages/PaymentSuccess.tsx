@@ -7,10 +7,11 @@ const PaymentSuccess = () => {
   const queryParams = new URLSearchParams(location.search);
   const sessionId = queryParams.get('checkout_session_id');
   const [clientReferenceId, setClientReferenceId] = useState<string | null>(null);
+  
 
   useEffect(() => {
     if (sessionId) {
-      fetch(`https://p2lkualwda.execute-api.us-east-2.amazonaws.com/get-checkout-session?checkout_session_id=${sessionId}`)
+      fetch(`https://slb2a881d1.execute-api.us-east-2.amazonaws.com/get-checkout-session?checkout_session_id=${sessionId}`)
         .then((response) => response.json())
         .then((data) => {
           setClientReferenceId(data.client_reference_id);
