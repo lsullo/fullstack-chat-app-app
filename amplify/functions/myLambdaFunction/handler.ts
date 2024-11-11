@@ -12,8 +12,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     return {
       statusCode: 400,
       headers: {
-        'Content-Type': 'application/json',
-        'Access-Control-Allow-Origin': 'https://main.ddn92qjed4i9g.amplifyapp.com',
+        'content-type': 'application/json',
+        'Access-Control-Allow-Origin': '*', // Allow CORS for any origin
       },
       body: JSON.stringify({ error: 'Missing checkout session ID' }),
     };
@@ -26,7 +26,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     return {
       statusCode: 200,
       headers: {
-        'Content-Type': 'application/json',
+        'content-type': 'application/json',
         'Access-Control-Allow-Origin': '*', // Allow CORS for any origin
       },
       body: JSON.stringify({
@@ -38,7 +38,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     return {
       statusCode: 500,
       headers: {
-        'Content-Type': 'application/json',
+        'content-type': 'application/json',
         'Access-Control-Allow-Origin': '*', // Allow CORS for any origin
       },
       body: JSON.stringify({ error: 'Failed to retrieve checkout session' }),
