@@ -11,31 +11,25 @@ export const handler: APIGatewayProxyHandler = async (event) => {
   if (!checkoutSessionId) {
     return {
       statusCode: 400,
-      body: 'Missing checkout session ID',
+      body: JSON.stringify({ error: 'Missing checkout session ID' }),
     };
   }
 
   try {
     // Fetch the checkout session details from Stripe
     const session = await stripe.checkout.sessions.retrieve(checkoutSessionId);
-    const returnUrl = session.success_url || '/default-path';
-
-    // Wait for 5 seconds
-    await new Promise((resolve) => setTimeout(resolve, 5000));
 
     return {
-      statusCode: 302,
-      headers: {
-        Location: returnUrl,
-      },
-      body: '',
+      statusCode: 200,
+      body: JSON.stringify({
+        client_reference_id: session.client_reference_id || null,
+      }),
     };
   } catch (error) {
     console.error('Error retrieving checkout session:', error);
     return {
       statusCode: 500,
-      body: 'Failed to retrieve checkout session',
+      body: JSON.stringify({ error: 'Failed to retrieve checkout session' }),
     };
   }
 };
-
