@@ -13,7 +13,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       statusCode: 400,
       headers: {
         'content-type': 'application/json',
-        'Access-Control-Allow-Origin': '*', // Allow CORS for any origin
+        //'Access-Control-Allow-Origin': '*', // Allow CORS for any origin
       },
       body: JSON.stringify({ error: 'Missing checkout session ID' }),
     };
@@ -27,7 +27,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       statusCode: 200,
       headers: {
         'content-type': 'application/json',
-        'Access-Control-Allow-Origin': '*', // Allow CORS for any origin
+        //'Access-Control-Allow-Origin': '*', // Allow CORS for any origin
       },
       body: JSON.stringify({
         client_reference_id: session.client_reference_id || null,
@@ -39,7 +39,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       statusCode: 500,
       headers: {
         'content-type': 'application/json',
-        'Access-Control-Allow-Origin': '*', // Allow CORS for any origin
+       //'Access-Control-Allow-Origin': '*', // Allow CORS for any origin
       },
       body: JSON.stringify({ error: 'Failed to retrieve checkout session' }),
     };
