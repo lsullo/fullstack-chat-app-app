@@ -1,7 +1,7 @@
 import { APIGatewayProxyHandler } from 'aws-lambda';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: "2023-08-16" as any });
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-08-16' as any });
 
 export const handler: APIGatewayProxyHandler = async (event) => {
   console.log('Event received:', JSON.stringify(event, null, 2));
@@ -11,6 +11,10 @@ export const handler: APIGatewayProxyHandler = async (event) => {
   if (!checkoutSessionId) {
     return {
       statusCode: 400,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*', // Allow CORS for any origin
+      },
       body: JSON.stringify({ error: 'Missing checkout session ID' }),
     };
   }
@@ -21,6 +25,10 @@ export const handler: APIGatewayProxyHandler = async (event) => {
 
     return {
       statusCode: 200,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*', // Allow CORS for any origin
+      },
       body: JSON.stringify({
         client_reference_id: session.client_reference_id || null,
       }),
@@ -29,6 +37,10 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     console.error('Error retrieving checkout session:', error);
     return {
       statusCode: 500,
+      headers: {
+        'Content-Type': 'application/json',
+        'Access-Control-Allow-Origin': '*', // Allow CORS for any origin
+      },
       body: JSON.stringify({ error: 'Failed to retrieve checkout session' }),
     };
   }
