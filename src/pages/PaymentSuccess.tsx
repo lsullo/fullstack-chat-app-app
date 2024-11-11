@@ -5,6 +5,7 @@ const PaymentSuccess = () => {
   const location = useLocation();
   const queryParams = new URLSearchParams(location.search);
   const sessionId = queryParams.get('checkout_session_id');
+  const clientReferenceId = queryParams.get('client_reference_id'); // Add this line
 
   return (
     <div className="hero min-h-screen bg-base-200">
@@ -22,6 +23,12 @@ const PaymentSuccess = () => {
             <div className="mt-4">
               <h2 className="text-xl font-semibold">Session ID:</h2>
               <p>{sessionId}</p>
+            </div>
+          )}
+          {clientReferenceId && ( // Display client reference ID
+            <div className="mt-4">
+              <h2 className="text-xl font-semibold">Client Reference ID:</h2>
+              <p>{clientReferenceId}</p>
             </div>
           )}
         </div>
