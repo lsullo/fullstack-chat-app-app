@@ -45,6 +45,7 @@ const schema = a.schema({
             role: a.enum(['VIP','User']),
             userNickname: a.string(),
             email: a.string().required(),
+            recentgroup: a.string(),
         })
         .authorization((allow) => [allow.authenticated().to(['create', 'read'])]),
 })

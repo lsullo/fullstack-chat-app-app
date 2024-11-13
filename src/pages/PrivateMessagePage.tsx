@@ -49,6 +49,37 @@ const PrivateMessagePage = () => {
   const currentUrl = window.location.href;
   const paymentLink = `https://buy.stripe.com/test_5kA28o5TpeLY9peeUU?client_reference_id=${encodeURIComponent(currentUrl)}`;
 
+  const handlePaymentLinkClick = async () => {
+    const userId = user.username; // Assuming this is the unique identifier
+  
+    if (userId) {
+      try {
+        // Fetch the UserIndex entry to get the correct id for update
+        const userIndexResponse = await client.models.UserIndex.list({
+          filter: { userId: { eq: userId } },
+        });
+  
+        if (userIndexResponse.data.length > 0) {
+          const userIndexRecord = userIndexResponse.data[0];
+          
+          // Now perform the update using the record's id
+          await client.models.UserIndex.update({
+            id: userIndexRecord.id,
+            recentgroup: currentUrl, // Update the recentgroup with the current page URL
+          });
+        } else {
+          console.warn(`No UserIndex entry found for userId: ${userId}`);
+        }
+      } catch (error) {
+        console.error('Error saving recent group:', error);
+      }
+    }
+  };
+  
+  
+  
+  
+
   const openPopup = () => setIsPopupOpen(true);
   const closePopup = () => setIsPopupOpen(false);
 
@@ -465,9 +496,10 @@ useEffect(() => {
         className="text-red-600 text-xl"
         onClick={openPopup}
       />
-      <a href= {paymentLink} className = "text-yellow-600 text-xl">
-      <FaUserSecret/>
+      <a href={paymentLink} onClick={handlePaymentLinkClick} className="text-yellow-600 text-xl">
+  <FaUserSecret />
       </a>
+
         
       
   </div>

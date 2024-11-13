@@ -1,47 +1,27 @@
-import { APIGatewayProxyHandler } from 'aws-lambda';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, { apiVersion: '2023-08-16' as any });
+const stripe = new Stripe('YOUR_STRIPE_SECRET_KEY', {
+  apiVersion: '2024-10-28.acacia',
+});
 
-export const handler: APIGatewayProxyHandler = async (event) => {
-  console.log('Event received:', JSON.stringify(event, null, 2));
-
-  const checkoutSessionId = event.queryStringParameters?.checkout_session_id;
-
-  if (!checkoutSessionId) {
-    return {
-      statusCode: 400,
-      headers: {
-        'content-type': 'application/json',
-        //'Access-Control-Allow-Origin': '*', // Allow CORS for any origin
-      },
-      body: JSON.stringify({ error: 'Missing checkout session ID' }),
-    };
-  }
+export const handler = async (event: any) => {
+  const { sessionId } = event;  // Ensure sessionId is part of the event
 
   try {
-    // Fetch the checkout session details from Stripe
-    const session = await stripe.checkout.sessions.retrieve(checkoutSessionId);
-
+    const session = await stripe.checkout.sessions.retrieve(sessionId);
     return {
       statusCode: 200,
-      headers: {
-        'content-type': 'application/json',
-        //'Access-Control-Allow-Origin': '*', // Allow CORS for any origin
-      },
       body: JSON.stringify({
-        client_reference_id: session.client_reference_id || null,
+        id: session.id,
+        payment_status: session.payment_status,
+        amount_total: session.amount_total,
       }),
     };
   } catch (error) {
-    console.error('Error retrieving checkout session:', error);
+    console.error('Error fetching session details', error);
     return {
       statusCode: 500,
-      headers: {
-        'content-type': 'application/json',
-       //'Access-Control-Allow-Origin': '*', // Allow CORS for any origin
-      },
-      body: JSON.stringify({ error: 'Failed to retrieve checkout session' }),
+      body: JSON.stringify({ error: 'Error fetching session details' }),
     };
   }
 };
