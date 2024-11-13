@@ -46,39 +46,46 @@ const PrivateMessagePage = () => {
   const [isPopup2Open, setIsPopup2Open] = useState(false);
   const [emailInput, setEmailInput] = useState(''); 
   const [memberEmails, setMemberEmails] = useState<string[]>([]); 
-  const currentUrl = window.location.href;
-  const paymentLink = `https://buy.stripe.com/test_5kA28o5TpeLY9peeUU?client_reference_id=${encodeURIComponent(currentUrl)}`;
+  //const paymentLink = `https://buy.stripe.com/test_5kA28o5TpeLY9peeUU?`;
+
 
   const handlePaymentLinkClick = async () => {
-    const userId = user.username; // Assuming this is the unique identifier
+    const currentUrl = window.location.href; // Get the current page URL
+    const stripeUrl = `https://buy.stripe.com/test_5kA28o5TpeLY9peeUU`; // Your Stripe payment link
   
-    if (userId) {
-      try {
-        // Fetch the UserIndex entry to get the correct id for update
+    try {
+      setLoading(true);
+      // Fetch the current user's ID from the auth session
+      const { tokens } = await fetchAuthSession();
+      
+  const userId = tokens?.idToken?.payload.sub;
+      if (userId) {
+        // Find the UserIndex entry for the current user
         const userIndexResponse = await client.models.UserIndex.list({
           filter: { userId: { eq: userId } },
         });
   
         if (userIndexResponse.data.length > 0) {
-          const userIndexRecord = userIndexResponse.data[0];
-          
-          // Now perform the update using the record's id
+          const userIndexEntry = userIndexResponse.data[0];
+  
+          // Update the recentgroup field with the current URL
           await client.models.UserIndex.update({
-            id: userIndexRecord.id,
-            recentgroup: currentUrl, // Update the recentgroup with the current page URL
+            id: userIndexEntry.id,
+            recentgroup: currentUrl,
           });
-        } else {
-          console.warn(`No UserIndex entry found for userId: ${userId}`);
         }
-      } catch (error) {
-        console.error('Error saving recent group:', error);
       }
+  
+      // Redirect to the Stripe payment link
+      window.location.href = stripeUrl;
+    } catch (error) {
+      console.error('Error updating recent group or redirecting to Stripe:', error);
+    }finally {
+      setLoading(false);
     }
   };
   
-  
-  
-  
+
 
   const openPopup = () => setIsPopupOpen(true);
   const closePopup = () => setIsPopupOpen(false);
@@ -496,12 +503,10 @@ useEffect(() => {
         className="text-red-600 text-xl"
         onClick={openPopup}
       />
-      <a href={paymentLink} onClick={handlePaymentLinkClick} className="text-yellow-600 text-xl">
+      <a onClick={handlePaymentLinkClick} className="text-yellow-600 text-xl">
   <FaUserSecret />
       </a>
-
-        
-      
+  
   </div>
       </div>
   

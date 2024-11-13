@@ -2,6 +2,7 @@ import { useAuthenticator } from '@aws-amplify/ui-react';
 import { useEffect, useState } from 'react';
 import { generateClient } from 'aws-amplify/api';
 import { Schema } from '../../amplify/data/resource';
+import { fetchAuthSession } from 'aws-amplify/auth';
 
 const client = generateClient<Schema>();
 
@@ -11,31 +12,38 @@ const PaymentSuccess = () => {
 
   useEffect(() => {
     const fetchRecentGroupUrl = async () => {
-      if (user?.username) {
-        try {
-          const userIndexResponse = await client.models.UserIndex.list({
-            filter: { userId: { eq: user.username } }, // Assuming userId is stored as username
-          });
-          
-          if (userIndexResponse.data.length > 0) {
-            setRecentGroupUrl(userIndexResponse.data[0].recentgroup);
-          } else {
-            console.warn(`No UserIndex entry found for userId: ${user.username}`);
+      try {
+        if (user) {
+          // Fetch the user ID
+          const session = await fetchAuthSession();
+          const userId = session.tokens?.idToken?.payload.sub;
+
+          if (userId) {
+            // Query UserIndex by userId to get the recentgroup URL
+            const userIndexResponse = await client.models.UserIndex.list({
+              filter: { userId: { eq: userId } },
+            });
+
+            if (userIndexResponse.data.length > 0) {
+              const userIndexEntry = userIndexResponse.data[0];
+              setRecentGroupUrl(userIndexEntry.recentgroup || null);
+            }
           }
-        } catch (error) {
-          console.error('Error fetching recent group URL:', error);
         }
+      } catch (error) {
+        console.error('Error fetching recent group URL:', error);
       }
     };
 
     fetchRecentGroupUrl();
   }, [user]);
 
+  // Redirect to recent group URL after 5 seconds if it exists
   useEffect(() => {
     if (recentGroupUrl) {
       setTimeout(() => {
         window.location.href = recentGroupUrl;
-      }, 5000); // Redirect after 5 seconds
+      }, 5000);
     }
   }, [recentGroupUrl]);
 
@@ -45,6 +53,7 @@ const PaymentSuccess = () => {
         <div className="max-w-md">
           <h1 className="text-2xl font-bold">Payment Successful!</h1>
           <p className="py-6">Thank you for your payment! You can now access your group chat rooms.</p>
+          <p>{recentGroupUrl ? `Redirecting to your recent group: ${recentGroupUrl}` : "Loading your recent group..."}</p>
         </div>
       </div>
     </div>
