@@ -2,12 +2,12 @@ import { FormEvent, useEffect, useRef, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Schema } from '../../amplify/data/resource';
 import { generateClient } from 'aws-amplify/api';
-import clsx from 'clsx';
 import { useAuthenticator } from '@aws-amplify/ui-react';
 import { uploadData } from 'aws-amplify/storage';
 import { StorageImage } from '@aws-amplify/ui-react-storage';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { FaSignOutAlt, FaPlus, FaUserSecret } from 'react-icons/fa'; 
+import clsx from 'clsx';
 
 const client = generateClient<Schema>();
 
@@ -39,6 +39,7 @@ const PrivateMessagePage = () => {
   const [fetchedUserId, setFetchedUserId] = useState('');
   const [isUserInGroup, setIsUserInGroup] = useState(true);
   const [loading, setLoading] = useState(true);
+  const [loadingfr, setLoadingfr] = useState(false);
   const [fetchedUsers, setFetchedUsers] = useState<string[]>([]);
   const [loadingNicknames, setLoadingNicknames] = useState(true);
   const [groupNotFound, setGroupNotFound] = useState(false);
@@ -46,21 +47,17 @@ const PrivateMessagePage = () => {
   const [isPopup2Open, setIsPopup2Open] = useState(false);
   const [emailInput, setEmailInput] = useState(''); 
   const [memberEmails, setMemberEmails] = useState<string[]>([]); 
-  //const paymentLink = `https://buy.stripe.com/test_5kA28o5TpeLY9peeUU?`;
-
 
   const handlePaymentLinkClick = async () => {
-    const currentUrl = window.location.href; // Get the current page URL
-    const stripeUrl = `https://buy.stripe.com/test_5kA28o5TpeLY9peeUU`; // Your Stripe payment link
+    const currentUrl = window.location.href; 
+    const stripeUrl = `https://buy.stripe.com/test_5kA28o5TpeLY9peeUU`;
   
     try {
-      setLoading(true);
-      // Fetch the current user's ID from the auth session
+      setLoadingfr(true);
       const { tokens } = await fetchAuthSession();
       
   const userId = tokens?.idToken?.payload.sub;
       if (userId) {
-        // Find the UserIndex entry for the current user
         const userIndexResponse = await client.models.UserIndex.list({
           filter: { userId: { eq: userId } },
         });
@@ -68,7 +65,6 @@ const PrivateMessagePage = () => {
         if (userIndexResponse.data.length > 0) {
           const userIndexEntry = userIndexResponse.data[0];
   
-          // Update the recentgroup field with the current URL
           await client.models.UserIndex.update({
             id: userIndexEntry.id,
             recentgroup: currentUrl,
@@ -76,17 +72,14 @@ const PrivateMessagePage = () => {
         }
       }
   
-      // Redirect to the Stripe payment link
       window.location.href = stripeUrl;
     } catch (error) {
       console.error('Error updating recent group or redirecting to Stripe:', error);
     }finally {
-      setLoading(false);
+      setLoadingfr(false);
     }
   };
   
-
-
   const openPopup = () => setIsPopupOpen(true);
   const closePopup = () => setIsPopupOpen(false);
 
@@ -438,6 +431,13 @@ useEffect(() => {
       </div>
     );
   }
+  if (loadingfr) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <h1 className="text-2xl">Loading...</h1>
+      </div>
+    );
+  }
 
   if (groupNotFound) {
     return (
@@ -569,7 +569,6 @@ useEffect(() => {
       </div>
     </div>
   )}
-
 
 <style>
   {`

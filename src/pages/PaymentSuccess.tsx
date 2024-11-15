@@ -14,12 +14,12 @@ const PaymentSuccess = () => {
     const fetchRecentGroupUrl = async () => {
       try {
         if (user) {
-          // Fetch the user ID
+          
           const session = await fetchAuthSession();
           const userId = session.tokens?.idToken?.payload.sub;
 
           if (userId) {
-            // Query UserIndex by userId to get the recentgroup URL
+            
             const userIndexResponse = await client.models.UserIndex.list({
               filter: { userId: { eq: userId } },
             });
@@ -38,12 +38,11 @@ const PaymentSuccess = () => {
     fetchRecentGroupUrl();
   }, [user]);
 
-  // Redirect to recent group URL after 5 seconds if it exists
   useEffect(() => {
     if (recentGroupUrl) {
       setTimeout(() => {
         window.location.href = recentGroupUrl;
-      }, 5000);
+      }, 3777);
     }
   }, [recentGroupUrl]);
 
