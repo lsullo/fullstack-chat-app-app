@@ -49,14 +49,14 @@ const PrivateMessagePage = () => {
   const [memberEmails, setMemberEmails] = useState<string[]>([]); 
 
   const handlePaymentLinkClick = async () => {
-    const currentUrl = window.location.href; 
+    const currentUrl = window.location.href;
     const stripeUrl = `https://buy.stripe.com/test_5kA28o5TpeLY9peeUU`;
   
     try {
       setLoadingfr(true);
       const { tokens } = await fetchAuthSession();
-      
-  const userId = tokens?.idToken?.payload.sub;
+  
+      const userId = tokens?.idToken?.payload.sub;
       if (userId) {
         const userIndexResponse = await client.models.UserIndex.list({
           filter: { userId: { eq: userId } },
@@ -69,16 +69,20 @@ const PrivateMessagePage = () => {
             id: userIndexEntry.id,
             recentgroup: currentUrl,
           });
+  
+          // Redirect to Stripe payment link with metadata
+          const stripeSessionUrl = `${stripeUrl}?metadata=${encodeURIComponent(
+            JSON.stringify({ userId })
+          )}`;
+          window.location.href = stripeSessionUrl;
         }
       }
-  
-      window.location.href = stripeUrl;
     } catch (error) {
-      console.error('Error updating recent group or redirecting to Stripe:', error);
-    }finally {
+      console.error('Error updating UserIndex or redirecting to Stripe:', error);
       setLoadingfr(false);
     }
   };
+  
   
   const openPopup = () => setIsPopupOpen(true);
   const closePopup = () => setIsPopupOpen(false);
