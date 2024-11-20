@@ -13,8 +13,8 @@ export const handler: Handler = async (event) => {
       content: `ACP ACTIVATED ANTI_GAY ON`, 
       userNickname: 'LTM', 
       type: 'system',
-      //createdAt: new Date().toISOString(),
-      //updatedAt: new Date().toISOString(),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     const params = {
