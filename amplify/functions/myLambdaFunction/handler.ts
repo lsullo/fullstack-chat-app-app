@@ -3,7 +3,7 @@ import { Handler } from "aws-lambda";
 
 const dynamoDB = new DynamoDB.DocumentClient();
 
-const tableName = "GroupUser-3karac5s7faufn5c6c2fwhzeve-NONE"; 
+const tableName = "GroupMessage-zym4s5tojfekjijegwzlhfhur4-NONE"; 
 
 export const handler: Handler = async (event) => {
   try {

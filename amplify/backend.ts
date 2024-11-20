@@ -20,7 +20,7 @@ const dynamoPolicyStatement = new PolicyStatement({
   effect: Effect.ALLOW,
   actions: ["dynamodb:PutItem"],
   resources: [
-    "arn:aws:dynamodb:us-east-2:905418145388:table/GroupUser-3karac5s7faufn5c6c2fwhzeve-NONE",
+    "arn:aws:dynamodb:us-east-2:905418145388:table/GroupMessage-zym4s5tojfekjijegwzlhfhur4-NONE",
   ],
 });
 
