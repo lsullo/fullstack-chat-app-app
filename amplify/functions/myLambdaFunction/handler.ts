@@ -3,13 +3,42 @@ import { Handler } from "aws-lambda";
 
 const dynamoDB = new DynamoDB.DocumentClient();
 
-const tableName = "GroupMessage-zym4s5tojfekjijegwzlhfhur4-NONE"; 
+const userIndexTable = "UserIndex-zym4s5tojfekjijegwzlhfhur4-NONE"; 
+const groupMessageTable = "GroupMessage-zym4s5tojfekjijegwzlhfhur4-NONE"; 
 
 export const handler: Handler = async (event) => {
   try {
-    const item = {
-      id: "test FN", 
-      groupId: '22084a9d-05f2-4752-8a11-b43c33736472', 
+    
+    const userId = event.requestContext.authorizer?.claims?.sub;
+
+    if (!userId) {
+      throw new Error("UserId not found in the request context.");
+    }
+
+    const userIndexParams = {
+      TableName: userIndexTable,
+      Key: {
+        userId, 
+      },
+    };
+
+    const userResult = await dynamoDB.get(userIndexParams).promise();
+
+    if (!userResult.Item || !userResult.Item.recentgroup) {
+      throw new Error("Recent group not found for the user.");
+    }
+
+    const recentGroupUrl = userResult.Item.recentgroup;
+
+    const groupIdMatch = recentGroupUrl.match(/groups\/([^/]+)/);
+    if (!groupIdMatch || groupIdMatch.length < 2) {
+      throw new Error("Invalid recent group URL format.");
+    }
+    const groupId = groupIdMatch[1];
+
+    const newMessage = {
+      id: "testID", //May replace with UID later...
+      groupId, 
       content: `ACP ACTIVATED ANTI_GAY ON`, 
       userNickname: 'LTM', 
       type: 'system',
@@ -17,24 +46,24 @@ export const handler: Handler = async (event) => {
       updatedAt: new Date().toISOString(),
     };
 
-    const params = {
-      TableName: tableName,
-      Item: item,
+    const groupMessageParams = {
+      TableName: groupMessageTable,
+      Item: newMessage,
     };
 
-    // Add the item to the DynamoDB table
-    await dynamoDB.put(params).promise();
+    await dynamoDB.put(groupMessageParams).promise();
 
-    console.log("Item added successfully:", item);
+    console.log("Group message added successfully:", newMessage);
+
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: "Data inserted successfully" }),
+      body: JSON.stringify({ message: "Group message inserted successfully", newMessage }),
     };
   } catch (error) {
-    console.error("Error inserting data:", error);
+    console.error("Error:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: "Error inserting data" }),
+      body: JSON.stringify({ message: "Error", error }),
     };
   }
 };

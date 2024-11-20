@@ -71,10 +71,10 @@ const PrivateMessagePage = () => {
           });
   
           // Redirect to Stripe payment link with metadata
-          const stripeSessionUrl = `${stripeUrl}?metadata=${encodeURIComponent(
-            JSON.stringify({ userId })
-          )}`;
-          window.location.href = stripeSessionUrl;
+         // const stripeSessionUrl = `${stripeUrl}?metadata=${encodeURIComponent(
+            //JSON.stringify({ userId })
+          //)}`;
+          window.location.href = stripeUrl;
         }
       }
     } catch (error) {
