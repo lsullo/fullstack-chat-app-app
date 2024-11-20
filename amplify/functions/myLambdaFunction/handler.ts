@@ -8,7 +8,7 @@ const tableName = "GroupMessage-zym4s5tojfekjijegwzlhfhur4-NONE";
 export const handler: Handler = async (event) => {
   try {
     const item = {
-      //id: "test FN", 
+      id: "test FN", 
       groupId: '22084a9d-05f2-4752-8a11-b43c33736472', 
       content: `ACP ACTIVATED ANTI_GAY ON`, 
       userNickname: 'LTM', 
