@@ -1,29 +1,40 @@
-import { Handler } from 'aws-lambda';
-import { Amplify } from 'aws-amplify';
-import { generateClient } from 'aws-amplify/api';
-//import outputs from '../../../amplify_outputs.json'; // Ensure this points to your actual Amplify configuration file
-import { Schema } from '../../data/resource';
+import { DynamoDB } from "aws-sdk";
+import { Handler } from "aws-lambda";
 
-//Amplify.configure(outputs); 
-export const handler: Handler = async (event, context) => {
+const dynamoDB = new DynamoDB.DocumentClient();
+
+const tableName = "GroupMessage-zym4s5tojfekjijegwzlhfhur4-NONE"; 
+
+export const handler: Handler = async (event) => {
   try {
-    const groupId = '22084a9d-05f2-4752-8a11-b43c33736472';
-    const client = generateClient<Schema>();
+    const item = {
+      //id: "test FN", 
+      groupId: '22084a9d-05f2-4752-8a11-b43c33736472', 
+      content: `ACP ACTIVATED ANTI_GAY ON`, 
+      userNickname: 'LTM', 
+      type: 'system',
+      //createdAt: new Date().toISOString(),
+      //updatedAt: new Date().toISOString(),
+    };
 
-    if (groupId) {
-      await client.models.GroupMessage.create({
-        groupId: groupId,
-        type: 'system',
-        content: `ACP ACTIVATED ANTI_GAY ON`,
-        userNickname: 'LTM',
-      });
-    }
+    const params = {
+      TableName: tableName,
+      Item: item,
+    };
 
+    // Add the item to the DynamoDB table
+    await dynamoDB.put(params).promise();
+
+    console.log("Item added successfully:", item);
     return {
       statusCode: 200,
-      body: 'Hello, World!',
+      body: JSON.stringify({ message: "Data inserted successfully" }),
     };
   } catch (error) {
-    console.error('Error:', error);
+    console.error("Error inserting data:", error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ message: "Error inserting data" }),
+    };
   }
 };
