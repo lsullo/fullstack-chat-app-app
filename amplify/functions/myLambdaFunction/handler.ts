@@ -23,11 +23,7 @@ export const handler: Handler = async (event) => {
     // Query the UserIndex table using the userId
     const userIndexParams = {
       TableName: userIndexTable,
-      IndexName: "userId-index", // Use a secondary index if userId is not the partition key
-      KeyConditionExpression: "userId = :userId",
-      ExpressionAttributeValues: {
-        ":userId": userId,
-      },
+      Key: { id: userId }, // Correct partition key
     };
 
     const userResult = await dynamoDB.query(userIndexParams).promise();
