@@ -3,26 +3,22 @@ import { Handler } from "aws-lambda";
 
 const dynamoDB = new DynamoDB.DocumentClient();
 
-const userIndexTable = "UserIndex-zym4s5tojfekjijegwzlhfhur4-NONE"; 
-const groupMessageTable = "GroupMessage-zym4s5tojfekjijegwzlhfhur4-NONE"; 
+const userIndexTable = "UserIndex-zym4s5tojfekjijegwzlhfhur4-NONE";
+const groupMessageTable = "GroupMessage-zym4s5tojfekjijegwzlhfhur4-NONE";
 
 export const handler: Handler = async (event) => {
   try {
-    
-    console.log('Received event:', JSON.stringify(event, null, 2))
+    console.log('Received event:', JSON.stringify(event, null, 2));
 
-
-    const userId = "710bf5d0-7061-705f-3d39-e3cbda1e138b" //default2004 user
+    const userId = event.detail.data.object.client_reference_id;
 
     if (!userId) {
-      throw new Error("UserId not found in the request context.");
+      throw new Error("client_reference_id not found in the event data.");
     }
 
     const userIndexParams = {
       TableName: userIndexTable,
-      Key: {
-        userId, 
-      },
+      Key: { userId },
     };
 
     const userResult = await dynamoDB.get(userIndexParams).promise();
@@ -32,18 +28,19 @@ export const handler: Handler = async (event) => {
     }
 
     const recentGroupUrl = userResult.Item.recentgroup;
-
     const groupIdMatch = recentGroupUrl.match(/groups\/([^/]+)/);
+
     if (!groupIdMatch || groupIdMatch.length < 2) {
       throw new Error("Invalid recent group URL format.");
     }
+
     const groupId = groupIdMatch[1];
 
     const newMessage = {
-      id: "test FN", //May replace with UID
-      groupId, 
-      content: `ACP ACTIVATED ANTI_GAY ON`, 
-      userNickname: 'LTM', 
+      id: "test FN",
+      groupId,
+      content: `ACP ACTIVATED ANTI_GAY ON`,
+      userNickname: 'LTM',
       type: 'system',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
@@ -54,7 +51,6 @@ export const handler: Handler = async (event) => {
       Item: newMessage,
     };
 
-    // Add the item to the GroupMessage table
     await dynamoDB.put(groupMessageParams).promise();
 
     console.log("Group message added successfully:", newMessage);

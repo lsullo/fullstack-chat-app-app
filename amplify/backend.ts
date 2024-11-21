@@ -5,29 +5,27 @@ import { auth } from './auth/resource';
 import { data } from './data/resource';
 import { myLambdaFunction } from './functions/myLambdaFunction/resource';
 
-
-/**
- * @see https://docs.amplify.aws/react/build-a-backend/ to add storage, functions, and more
- */
 export const backend = defineBackend({
   auth,
   data,
   storage,
-  myLambdaFunction, 
+  myLambdaFunction,
 });
 
 const dynamoPolicyStatement = new PolicyStatement({
   effect: Effect.ALLOW,
-  actions: ["dynamodb:PutItem"],
+  actions: [
+    "dynamodb:GetItem",
+    "dynamodb:PutItem"
+  ],
   resources: [
-    "arn:aws:dynamodb:us-east-2:905418145388:table/GroupMessage-zym4s5tojfekjijegwzlhfhur4-NONE",
+    "arn:aws:dynamodb:us-east-2:905418145388:table/UserIndex-zym4s5tojfekjijegwzlhfhur4-NONE",
+    "arn:aws:dynamodb:us-east-2:905418145388:table/GroupMessage-zym4s5tojfekjijegwzlhfhur4-NONE"
   ],
 });
-
 
 const dynamoPolicy = new Policy(backend.myLambdaFunction.resources.lambda, 'DynamoDBAccessPolicy', {
   statements: [dynamoPolicyStatement],
 });
-
 
 backend.myLambdaFunction.resources.lambda.role?.attachInlinePolicy(dynamoPolicy);
