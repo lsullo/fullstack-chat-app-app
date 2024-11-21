@@ -69,12 +69,11 @@ const PrivateMessagePage = () => {
             id: userIndexEntry.id,
             recentgroup: currentUrl,
           });
+
+          const stripeUrl2 = `${stripeUrl}?client_reference_id=${encodeURIComponent(userId)}`;
+
   
-          // Redirect to Stripe payment link with metadata
-         // const stripeSessionUrl = `${stripeUrl}?metadata=${encodeURIComponent(
-            //JSON.stringify({ userId })
-          //)}`;
-          window.location.href = stripeUrl;
+          window.location.href = stripeUrl2;
         }
       }
     } catch (error) {

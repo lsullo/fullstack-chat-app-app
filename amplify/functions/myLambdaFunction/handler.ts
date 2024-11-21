@@ -9,7 +9,10 @@ const groupMessageTable = "GroupMessage-zym4s5tojfekjijegwzlhfhur4-NONE";
 export const handler: Handler = async (event) => {
   try {
     
-    const userId = event.requestContext.authorizer?.claims?.sub;
+    console.log('Received event:', JSON.stringify(event, null, 2))
+
+
+    const userId = "710bf5d0-7061-705f-3d39-e3cbda1e138b" //default2004 user
 
     if (!userId) {
       throw new Error("UserId not found in the request context.");
@@ -37,7 +40,7 @@ export const handler: Handler = async (event) => {
     const groupId = groupIdMatch[1];
 
     const newMessage = {
-      id: "testID", //May replace with UID later...
+      id: "test FN", //May replace with UID
       groupId, 
       content: `ACP ACTIVATED ANTI_GAY ON`, 
       userNickname: 'LTM', 
@@ -51,6 +54,7 @@ export const handler: Handler = async (event) => {
       Item: newMessage,
     };
 
+    // Add the item to the GroupMessage table
     await dynamoDB.put(groupMessageParams).promise();
 
     console.log("Group message added successfully:", newMessage);
@@ -60,10 +64,10 @@ export const handler: Handler = async (event) => {
       body: JSON.stringify({ message: "Group message inserted successfully", newMessage }),
     };
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error processing request:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: "Error", error }),
+      body: JSON.stringify({ message: "Error processing request", error }),
     };
   }
 };
