@@ -26,16 +26,15 @@ export const handler: Handler = async (event) => {
       Key: { id: userId }, // Correct partition key
     };
 
-    const userResult = await dynamoDB.query(userIndexParams).promise();
+    const userResult = await dynamoDB.get(userIndexParams).promise();
 
     console.log("UserIndex Query Result:", JSON.stringify(userResult, null, 2));
 
-    // Ensure we found a matching record and it has a recentgroup
-    if (!userResult.Items || userResult.Items.length === 0 || !userResult.Items[0].recentgroup) {
+    if (!userResult.Item || !userResult.Item.recentgroup) {
       throw new Error("Recent group not found for the user.");
     }
-
-    const recentGroupUrl = userResult.Items[0].recentgroup;
+    
+    const recentGroupUrl = userResult.Item.recentgroup;
 
     // Extract the groupId from the recent group URL
     const groupIdMatch = recentGroupUrl.match(/groups\/([^/]+)/);
