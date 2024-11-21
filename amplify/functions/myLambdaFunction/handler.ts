@@ -1,6 +1,6 @@
 import { DynamoDB } from "aws-sdk";
 import { Handler } from "aws-lambda";
-import { v4 as uuidv4 } from "uuid"; // Ensure you install 'uuid' if not already present.
+import { v4 as uuidv4 } from "uuid";
 
 const dynamoDB = new DynamoDB.DocumentClient();
 
@@ -9,7 +9,7 @@ const groupMessageTable = "GroupMessage-zym4s5tojfekjijegwzlhfhur4-NONE";
 
 export const handler: Handler = async (event) => {
   try {
-    console.log('Received event:', JSON.stringify(event, null, 2));
+    console.log("Received event:", JSON.stringify(event, null, 2));
 
     // Extract client_reference_id from the event detail
     const userId = event.detail?.data?.object?.client_reference_id;
@@ -21,7 +21,7 @@ export const handler: Handler = async (event) => {
     // Fetch the user's recent group from UserIndex table
     const userIndexParams = {
       TableName: userIndexTable,
-      Key: { userId }, // Ensure this matches the UserIndex primary key schema
+      Key: { id: userId }, // Correct partition key
     };
 
     const userResult = await dynamoDB.get(userIndexParams).promise();
@@ -43,7 +43,7 @@ export const handler: Handler = async (event) => {
     const newMessageId = uuidv4();
 
     const newMessage = {
-      id: newMessageId,
+      id: newMessageId, // Unique partition key
       groupId,
       content: `ACP ACTIVATED ANTI_GAY ON`,
       userNickname: "LTM",
@@ -64,7 +64,10 @@ export const handler: Handler = async (event) => {
 
     return {
       statusCode: 200,
-      body: JSON.stringify({ message: "Group message inserted successfully", newMessage }),
+      body: JSON.stringify({
+        message: "Group message inserted successfully",
+        newMessage,
+      }),
     };
   } catch (error) {
     console.error("Error processing request:", error);
