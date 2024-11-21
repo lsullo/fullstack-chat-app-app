@@ -20,21 +20,25 @@ export const handler: Handler = async (event) => {
 
     console.log("Querying UserIndex table with userId:", userId);
 
-    // Query the UserIndex table using the userId
     const userIndexParams = {
       TableName: userIndexTable,
-      Key: { id: userId }, // Correct partition key
+      IndexName: "userId", // Replace with the name of your GSI
+      KeyConditionExpression: "userId = :userId",
+      ExpressionAttributeValues: {
+        ":userId": userId,
+      },
     };
-
-    const userResult = await dynamoDB.get(userIndexParams).promise();
-
+    
+    const userResult = await dynamoDB.query(userIndexParams).promise();
+    
     console.log("UserIndex Query Result:", JSON.stringify(userResult, null, 2));
-
-    if (!userResult.Item || !userResult.Item.recentgroup) {
-      throw new Error("Recent group not found for the user.");
+    
+    if (!userResult.Items || userResult.Items.length === 0) {
+      throw new Error("User not found with the provided userId.");
     }
     
-    const recentGroupUrl = userResult.Item.recentgroup;
+    const userItem = userResult.Items[0];
+    const recentGroupUrl = userItem.recentgroup;
 
     // Extract the groupId from the recent group URL
     const groupIdMatch = recentGroupUrl.match(/groups\/([^/]+)/);
