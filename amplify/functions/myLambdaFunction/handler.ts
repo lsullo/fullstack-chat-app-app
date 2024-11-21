@@ -18,19 +18,30 @@ export const handler: Handler = async (event) => {
       throw new Error("client_reference_id not found in the event data.");
     }
 
-    // Fetch the user's recent group from UserIndex table
+    console.log("Querying UserIndex table with userId:", userId);
+
+    // Query the UserIndex table using the userId
     const userIndexParams = {
       TableName: userIndexTable,
-      Key: { id: userId }, // Correct partition key
+      IndexName: "userId-index", // Use a secondary index if userId is not the partition key
+      KeyConditionExpression: "userId = :userId",
+      ExpressionAttributeValues: {
+        ":userId": userId,
+      },
     };
 
-    const userResult = await dynamoDB.get(userIndexParams).promise();
+    const userResult = await dynamoDB.query(userIndexParams).promise();
 
-    if (!userResult.Item || !userResult.Item.recentgroup) {
+    console.log("UserIndex Query Result:", JSON.stringify(userResult, null, 2));
+
+    // Ensure we found a matching record and it has a recentgroup
+    if (!userResult.Items || userResult.Items.length === 0 || !userResult.Items[0].recentgroup) {
       throw new Error("Recent group not found for the user.");
     }
 
-    const recentGroupUrl = userResult.Item.recentgroup;
+    const recentGroupUrl = userResult.Items[0].recentgroup;
+
+    // Extract the groupId from the recent group URL
     const groupIdMatch = recentGroupUrl.match(/groups\/([^/]+)/);
 
     if (!groupIdMatch || groupIdMatch.length < 2) {
@@ -38,6 +49,7 @@ export const handler: Handler = async (event) => {
     }
 
     const groupId = groupIdMatch[1];
+    console.log("Extracted groupId:", groupId);
 
     // Generate a unique ID for the group message
     const newMessageId = uuidv4();
@@ -51,6 +63,8 @@ export const handler: Handler = async (event) => {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+
+    console.log("New group message payload:", newMessage);
 
     const groupMessageParams = {
       TableName: groupMessageTable,
