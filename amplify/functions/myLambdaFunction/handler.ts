@@ -11,7 +11,6 @@ export const handler: Handler = async (event) => {
   try {
     console.log("Received event:", JSON.stringify(event, null, 2));
 
-    // Extract client_reference_id from the event detail
     const userId = event.detail?.data?.object?.client_reference_id;
 
     if (!userId) {
@@ -22,7 +21,7 @@ export const handler: Handler = async (event) => {
 
     const userIndexParams = {
       TableName: userIndexTable,
-      IndexName: "userId", // Replace with the name of your GSI
+      IndexName: "userIndicesByUserId", 
       KeyConditionExpression: "userId = :userId",
       ExpressionAttributeValues: {
         ":userId": userId,
@@ -40,7 +39,6 @@ export const handler: Handler = async (event) => {
     const userItem = userResult.Items[0];
     const recentGroupUrl = userItem.recentgroup;
 
-    // Extract the groupId from the recent group URL
     const groupIdMatch = recentGroupUrl.match(/groups\/([^/]+)/);
 
     if (!groupIdMatch || groupIdMatch.length < 2) {
@@ -50,11 +48,11 @@ export const handler: Handler = async (event) => {
     const groupId = groupIdMatch[1];
     console.log("Extracted groupId:", groupId);
 
-    // Generate a unique ID for the group message
+    
     const newMessageId = uuidv4();
 
     const newMessage = {
-      id: newMessageId, // Unique partition key
+      id: newMessageId,
       groupId,
       content: `ACP ACTIVATED ANTI_GAY ON`,
       userNickname: "LTM",
@@ -70,7 +68,6 @@ export const handler: Handler = async (event) => {
       Item: newMessage,
     };
 
-    // Insert the new message into the GroupMessage table
     await dynamoDB.put(groupMessageParams).promise();
 
     console.log("Group message added successfully:", newMessage);
