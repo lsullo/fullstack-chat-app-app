@@ -54,7 +54,7 @@ export const handler: Handler = async (event) => {
       Key: {
         id: groupId,
       },
-      UpdateExpression: "SET role = :activated",
+      UpdateExpression: "SET chatstatus = :activated",
       ExpressionAttributeValues: {
         ":activated": "Activated",
       },
