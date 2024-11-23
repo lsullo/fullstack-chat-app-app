@@ -183,7 +183,7 @@ useEffect(() => {
         groupname: groupName,
         groupUrlName,
         adminId: fetchedUserId,
-        role: 'Default',
+        role: 'Def',
       });
   
       
