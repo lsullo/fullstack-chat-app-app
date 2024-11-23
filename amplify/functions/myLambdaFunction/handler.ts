@@ -6,6 +6,7 @@ const dynamoDB = new DynamoDB.DocumentClient();
 
 const userIndexTable = "UserIndex-zym4s5tojfekjijegwzlhfhur4-NONE";
 const groupMessageTable = "GroupMessage-zym4s5tojfekjijegwzlhfhur4-NONE";
+const groupTable = "Group-zym4s5tojfekjijegwzlhfhur4-NONE";
 
 export const handler: Handler = async (event) => {
   try {
@@ -47,6 +48,22 @@ export const handler: Handler = async (event) => {
 
     const groupId = groupIdMatch[1];
     console.log("Extracted groupId:", groupId);
+
+    const updateGroupParams = {
+      TableName: groupTable,
+      Key: {
+        id: groupId,
+      },
+      UpdateExpression: "SET role = :activated",
+      ExpressionAttributeValues: {
+        ":activated": "Activated",
+      },
+      ReturnValues: "UPDATED_NEW",
+    };
+
+    const updateGroupResult = await dynamoDB.update(updateGroupParams).promise();
+
+    console.log("Group role updated successfully:", JSON.stringify(updateGroupResult, null, 2));
 
     
     const newMessageId = uuidv4();

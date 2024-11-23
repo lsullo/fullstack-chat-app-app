@@ -183,6 +183,7 @@ useEffect(() => {
         groupname: groupName,
         groupUrlName,
         adminId: fetchedUserId,
+        role: 'Default',
       });
   
       
@@ -421,13 +422,15 @@ const handleDeleteGroup = async () => {
           </div>
         </div>
       
-<section>
+        <section>
   {groups
     .filter((group) => group !== null)
     .map((group) => (
       <article
         key={group.id}
-        className="bg-accent rounded flex flex-col max-w-screen-md mx-auto p-4 relative"
+        className={`rounded flex flex-col max-w-screen-md mx-auto p-4 relative ${
+          group.role === "Activated" ? "bg-red-500" : "bg-gray-500"
+        }`}
       >
         <Link
           className="text-2xl text-primary-content"
@@ -442,8 +445,6 @@ const handleDeleteGroup = async () => {
             className="absolute top-15 right-6 text-3xl text-primary-content"
             onClick={() => handleDeleteClick(group.id)}
           />
-            
-          
         ) : (
           <FaSignOutAlt
             className="absolute top-15 right-6 text-3xl text-primary-content cursor-pointer"
@@ -454,6 +455,7 @@ const handleDeleteGroup = async () => {
       </article>
     ))}
 </section>
+
 
       {deleteGroupId && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center">
