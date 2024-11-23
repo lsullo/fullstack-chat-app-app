@@ -63,7 +63,7 @@ export const handler: Handler = async (event) => {
 
     const updateGroupResult = await dynamoDB.update(updateGroupParams).promise();
 
-    console.log("Group role updated successfully:", JSON.stringify(updateGroupResult, null, 2));
+    console.log("Group chat status updated successfully:", JSON.stringify(updateGroupResult, null, 2));
 
     
     const newMessageId = uuidv4();
