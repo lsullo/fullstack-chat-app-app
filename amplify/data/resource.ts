@@ -8,7 +8,7 @@ const schema = a.schema({
             messages: a.hasMany('GroupMessage', 'groupId'),
             adminId: a.id().required(),  
             members: a.hasMany('GroupUser', 'groupId'), 
-            role: a.enum(['Def','Activated']), 
+            chatstatus: a.enum(['Def','Activated']), 
         })
         .secondaryIndexes((index) => [index('groupUrlName')])
         .authorization((allow) => [

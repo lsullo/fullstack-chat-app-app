@@ -183,7 +183,7 @@ useEffect(() => {
         groupname: groupName,
         groupUrlName,
         adminId: fetchedUserId,
-        role: 'Def',
+        chatstatus: 'Def',
       });
   
       
@@ -429,7 +429,7 @@ const handleDeleteGroup = async () => {
       <article
         key={group.id}
         className={`rounded flex flex-col max-w-screen-md mx-auto p-4 relative ${
-          group.role === "Activated" ? "bg-red-500" : "bg-gray-500"
+          group.chatstatus === "Activated" ? "bg-red-500" : "bg-gray-500"
         }`}
       >
         <Link
