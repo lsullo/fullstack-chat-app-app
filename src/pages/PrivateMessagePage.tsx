@@ -32,6 +32,7 @@ const PrivateMessagePage = () => {
     groupId: string;
     groupname: string;
     adminId: string;
+    chatstatus: 'Def' | 'Activated';
   }>();
   const [msgText, setMsgText] = useState('');
   const [msgFile, setMsgFile] = useState<File | null>(null);
@@ -317,7 +318,7 @@ const PrivateMessagePage = () => {
     client.models.Group.listGroupByGroupUrlName(
       { groupUrlName: groupID },
       {
-        selectionSet: ['id', 'groupname', 'adminId', 'messages.*'],
+        selectionSet: ['id', 'groupname', 'adminId', 'messages.*','chatstatus'],
       }
     ).then(({ data }) => {
 
@@ -335,6 +336,8 @@ const PrivateMessagePage = () => {
         groupId: data[0].id,
         groupname: data[0].groupname,
         adminId: data[0].adminId,
+        chatstatus: data[0].chatstatus ?? 'Def',
+        
       });
     });
   }, [groupID]);
@@ -481,7 +484,11 @@ useEffect(() => {
   };
   
   return (
-    <div className="flex flex-col h-screen">
+    <div
+      className={`flex flex-col min-h-screen ${
+        groupDetails?.chatstatus === "Activated" ? "bg-black" : "bg-white"
+      }`}
+    >
       
       <div className="bg-gray-100 flex justify-between items-center p-4 shadow-md">
       
@@ -507,7 +514,9 @@ useEffect(() => {
         onClick={openPopup}
       />
       <a onClick={handlePaymentLinkClick} className="text-yellow-600 text-xl">
-  <FaUserSecret />
+      {groupDetails?.adminId && groupDetails?.chatstatus !== "Activated" && (
+          <FaUserSecret/>
+        )}
       </a>
   
   </div>
@@ -586,19 +595,24 @@ useEffect(() => {
 
         {/* Chat messages */}
         {msgs.map((msg) => (
-  <div
-    key={msg.id}
-    className={clsx(
-      'w-full flex',
-      msg.owner !== user.username ? 'justify-start' : 'justify-end',
-      msg.type === 'system' ? 'justify-center' : ''
-    )}
-  >
-    {msg.type === 'system' ? (
-      <div className="text-gray-500 text-center w-full">
-        <p className="text-sm italic">{msg.content}</p>
-        <time className="text-xs opacity-50">{formatTime(msg.createdAt)}</time>
-      </div>
+      <div
+      key={msg.id}
+      className={clsx(
+        'w-full flex',
+        msg.owner !== user.username ? 'justify-start' : 'justify-end',
+        msg.type === 'system' ? 'justify-center' : ''
+      )}
+    >
+      {msg.type === 'system' ? (
+        <div
+          className={clsx(
+            'text-center w-full',
+            groupDetails?.chatstatus === 'Activated' ? 'text-white' : 'text-gray-500'
+          )}
+        >
+          <p className="text-sm italic">{msg.content}</p>
+          <time className="text-xs opacity-50">{formatTime(msg.createdAt)}</time>
+        </div>
     ) : (
       <>
         {msg.content && (
