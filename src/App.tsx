@@ -37,11 +37,11 @@ const router = createBrowserRouter([
             element: <PaymentSuccess />,
           },
           {
-            path: '/groupdetails/:groupID', 
+            path: 'groupdetails/:groupID', 
             element: <GroupDetails />,
           },
           {
-            path: '/profile/:id', 
+            path: 'profile/:userIndexId', 
             element: <ProfilePage />,
           },
         ],
