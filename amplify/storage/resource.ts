@@ -5,4 +5,11 @@ export const storage = defineStorage({
 	access: (allow) => ({
 		'chat-pics/*': [allow.authenticated.to(['read', 'write'])],
 	}),
+	
 })
+export const anotherStorage = defineStorage({
+    name: 'profilepics',
+    access: (allow) => ({
+        'profile-pics/*': [allow.authenticated.to(['read', 'write'])],
+    }),
+});

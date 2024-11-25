@@ -1,9 +1,10 @@
 import { useAuthenticator } from '@aws-amplify/ui-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { generateClient } from 'aws-amplify/api';
 import { Schema } from '../../amplify/data/resource';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { FaPen } from 'react-icons/fa';
+import { uploadData } from 'aws-amplify/storage';
 
 const client = generateClient<Schema>();
 
@@ -14,33 +15,32 @@ const Profile = () => {
   const [photoUrl, setPhotoUrl] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
 
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   useEffect(() => {
     const checkOwnershipAndFetchPhoto = async () => {
       try {
         if (user) {
-          const session = await fetchAuthSession();
-          const userId = session.tokens?.idToken?.payload.sub;
+          const currentUrl = window.location.href;
+          const urlUserIndexId = new URL(currentUrl).pathname.split('/').pop();
 
-          if (userId) {
+          if (urlUserIndexId) {
+            // Fetch UserIndex entry by URL ID
             const userIndexResponse = await client.models.UserIndex.list({
-              filter: { userId: { eq: userId } },
+              filter: { id: { eq: urlUserIndexId } },
             });
 
-            if (userIndexResponse.data.length > 0) {
+            if (userIndexResponse.data && userIndexResponse.data.length > 0) {
               const userIndexEntry = userIndexResponse.data[0];
 
-              // Parse current URL to determine profile user
-              const currentUrl = window.location.href;
-              const urlUserId = new URL(currentUrl).pathname.split('/').pop();
+              // Fetch current user session for ID comparison
+              const session = await fetchAuthSession();
+              const userId = session.tokens?.idToken?.payload.sub;
 
-              // Set ownership state
-              if (urlUserId === userIndexEntry.userId) {
-                setIsOwner(true);
-              } else {
-                setIsOwner(false);
-              }
+              // Check ownership
+              setIsOwner(userId === userIndexEntry.userId);
 
-              // Fetch profile data
+              // Fetch profile photo if available
               if (userIndexEntry.photoId) {
                 const url = `/path/to/image/${userIndexEntry.photoId}`;
                 setPhotoUrl(url);
@@ -48,8 +48,13 @@ const Profile = () => {
                 setPhotoUrl(null);
               }
 
+              // Set username
               setUsername(userIndexEntry.userNickname || 'No username available');
+            } else {
+              console.error(`No UserIndex entry found for ID: ${urlUserIndexId}`);
             }
+          } else {
+            console.error('Invalid URL: Could not extract UserIndex ID.');
           }
         }
       } catch (error) {
@@ -61,6 +66,43 @@ const Profile = () => {
 
     checkOwnershipAndFetchPhoto();
   }, [user]);
+
+  const handleFilePickerClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      try {
+        // Upload the file and await the result
+        const uploadedItem = await uploadData({
+          data: file,
+          path: `profile-pics/${file.name}`,
+        }).result;
+  
+        // Access the path from the resolved value
+        const photoId = uploadedItem.path;
+  
+        // Update UserIndex with new photoId
+        const currentUrl = window.location.href;
+        const urlUserIndexId = new URL(currentUrl).pathname.split('/').pop();
+  
+        if (urlUserIndexId) {
+          await client.models.UserIndex.update({
+            id: urlUserIndexId,
+            photoId, // Directly update the `photoId`
+          });
+  
+          // Update the UI with the new photo URL
+          setPhotoUrl(`/path/to/image/${photoId}`);
+        }
+      } catch (error) {
+        console.error('Error uploading file or updating user index:', error);
+      }
+    }
+  };
+  
 
   if (loading) {
     return <div>Loading...</div>;
@@ -79,31 +121,29 @@ const Profile = () => {
               {photoUrl ? (
                 <img src={photoUrl} alt="Profile" />
               ) : (
-                <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">
-                  No Photo
-                </div>
+                <img src="/public/pfp.webp" alt="Default profile picture" />
               )}
             </div>
             {isOwner && (
-              <button
-                className="absolute bottom-2 right-2 btn btn-sm btn-circle btn-primary"
-                onClick={() => console.log('Open file picker or edit logic')}
-              >
-                <FaPen />
-              </button>
+              <>
+                <button
+                  className="absolute bottom-2 right-2 btn btn-sm btn-circle btn-primary"
+                  onClick={handleFilePickerClick}
+                >
+                  <FaPen />
+                </button>
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  className="hidden"
+                />
+              </>
             )}
           </div>
           {isOwner ? (
             <div className="mt-4">
-              <button className="btn btn-primary" onClick={() => console.log('Edit profile logic')}>
-                Edit Profile
-              </button>
-              <button
-                className="btn btn-secondary ml-2"
-                onClick={() => console.log('Change photo logic')}
-              >
-                Change Photo
-              </button>
+              <button className="btn btn-primary">Edit Profile</button>
             </div>
           ) : (
             <p className="mt-4 text-gray-600">You are viewing this profile as a guest.</p>

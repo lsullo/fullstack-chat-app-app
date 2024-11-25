@@ -120,9 +120,7 @@ const GroupDetails = () => {
                   {user.photoUrl ? (
                     <img src={user.photoUrl} alt={`${user.userNickname}'s profile`} />
                   ) : (
-                    <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500">
-                      No Photo
-                    </div>
+                    <img src="/public/pfp.webp" alt="Default profile picture" />
                   )}
                 </div>
                 <div className="text-center">
