@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
 import { generateClient } from 'aws-amplify/api';
 import { Schema } from '../../amplify/data/resource';
-import { useParams, Link } from 'react-router-dom';
 
 const client = generateClient<Schema>();
 
 const GroupDetails = () => {
-  const { groupID } = useParams();
-  const [loading, setLoading] = useState<boolean>(true);
+  const { groupID } = useParams(); // Extract the group ID from the URL
+  const [loading, setLoading] = useState(true);
   const [groupNotFound, setGroupNotFound] = useState(false);
   const [groupDetails, setGroupDetails] = useState<{
     groupId: string;
@@ -30,20 +30,15 @@ const GroupDetails = () => {
   useEffect(() => {
     const fetchGroupDetails = async () => {
       try {
-        const groupResponse = await client.models.Group.listGroupByGroupUrlName(
-          { groupUrlName: groupID || '' }, // Default to empty string if groupID is undefined
-          {
-            selectionSet: ['id', 'groupname', 'adminId', 'chatstatus'],
-          }
-        );
-
-        if (groupResponse.data.length === 0) {
+        // Fetch the group details
+        const groupResponse = await client.models.Group.get({ id: groupID || '' });
+        if (!groupResponse.data) {
           setGroupNotFound(true);
           setLoading(false);
           return;
         }
 
-        const groupData = groupResponse.data[0];
+        const groupData = groupResponse.data;
         setGroupDetails({
           groupId: groupData.id,
           groupname: groupData.groupname || 'Unnamed Group', // Default value
@@ -51,23 +46,26 @@ const GroupDetails = () => {
           chatstatus: groupData.chatstatus ?? 'Def',
         });
 
+        // Fetch all group users associated with the group ID
         const groupUsersResponse = await client.models.GroupUser.list({
           filter: { groupId: { eq: groupData.id } },
         });
 
+        // Fetch UserIndex data for each userId in group users
         const enrichedUsers = await Promise.all(
           groupUsersResponse.data.map(async (groupUser) => {
-            const userIndexResponse = await client.models.UserIndex.get({
-              id: groupUser.userId,
+            const userIndexResponse = await client.models.UserIndex.list({
+              filter: { userId: { eq: groupUser.userId } }, // Use userId to fetch UserIndex
             });
 
+            const userIndex = userIndexResponse.data[0];
             return {
-              userIndexId: userIndexResponse.data?.id || '',
+              userIndexId: userIndex?.id || '', // Use the userIndexId for the profile link
               userId: groupUser.userId,
-              userNickname: groupUser.userNickname || 'Anonymous',
-              photoUrl: userIndexResponse.data?.photoId || null,
-              email: groupUser.email || 'No Email',
-              role: groupUser.role === 'admin' ? 'Admin' as const : 'Member' as const, // Ensure literal type match
+              userNickname: userIndex?.userNickname || 'Anonymous',
+              photoUrl: userIndex?.photoId || null,
+              email: userIndex?.email || 'No Email',
+              role: groupUser.role === 'admin' ? 'Admin' as const : 'Member' as const,
             };
           })
         );
