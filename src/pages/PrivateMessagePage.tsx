@@ -476,10 +476,15 @@ useEffect(() => {
     );
   }
   const renderChatName = () => {
-    if (!groupDetails?.groupname) return null;
+    if (!groupDetails?.groupname || !groupDetails?.groupId) return null;
   
     return (
-      <h1 className="text-2xl font-bold">{groupDetails.groupname}</h1>
+      <Link
+        to={`/groupdetails/${groupDetails.groupId}`}
+        className="text-2xl font-bold hover:text-red-600 transition-colors"
+      >
+        {groupDetails.groupname}
+      </Link>
     );
   };
   
@@ -600,7 +605,8 @@ useEffect(() => {
       className={clsx(
         'w-full flex',
         msg.owner !== user.username ? 'justify-start' : 'justify-end',
-        msg.type === 'system' ? 'justify-center' : ''
+        msg.type === 'system' ? 'justify-center' : '',
+       // groupDetails?.chatstatus === 'Activated' ? 'text-white' : 'text-black'
       )}
     >
       {msg.type === 'system' ? (
