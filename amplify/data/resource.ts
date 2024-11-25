@@ -47,6 +47,7 @@ const schema = a.schema({
             userNickname: a.string(),
             email: a.string().required(),
             recentgroup: a.string(),
+            photoId: a.string(),
         })
         .secondaryIndexes((index) => [index('userId')])
         .authorization((allow) => [allow.authenticated().to(['create', 'read', 'update'])]),

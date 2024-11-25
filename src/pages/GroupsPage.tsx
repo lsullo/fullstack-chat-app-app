@@ -20,6 +20,8 @@ const GroupsPage = () => {
   const [userNickname, setUserNickname] = useState('');
   const [deleteGroupId, setDeleteGroupId] = useState<string | null>(null); 
   const [leaveGroupId, setLeaveGroupId] = useState<string | null>(null); 
+  const [isUserIndexChecked, setIsUserIndexChecked] = useState(false);
+
 
   const navigate = useNavigate();
   const client = generateClient<Schema>();
@@ -63,9 +65,10 @@ const GroupsPage = () => {
     };
 
     if (fetchedUserId) {
+      setIsUserIndexChecked(true);
       checkAndCreateUserIndex();
     }
-  }, [fetchedUserId, client.models.UserIndex, userEmail]);
+  }, [fetchedUserId, client.models.UserIndex, userEmail,isUserIndexChecked]);
 
   useEffect(() => {
     const fetchUserGroups = async () => {

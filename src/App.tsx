@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage';
 import GroupsPage from './pages/GroupsPage';
 import PrivateMessagePage from './pages/PrivateMessagePage';
 import PaymentSuccess from './pages/PaymentSuccess';
+import ProfilePage from './pages/pfp';
 
 const router = createBrowserRouter([
   {
@@ -33,6 +34,10 @@ const router = createBrowserRouter([
           {
             path: '/paymentsuccess', // Add the PaymentSuccess route
             element: <PaymentSuccess />,
+          },
+          {
+            path: '/profile/:id', // Add the PaymentSuccess route
+            element: <ProfilePage />,
           },
         ],
       },
