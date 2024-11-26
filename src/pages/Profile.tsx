@@ -5,6 +5,7 @@ import { Schema } from '../../amplify/data/resource';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { FaPen } from 'react-icons/fa';
 import { uploadData } from 'aws-amplify/storage';
+import { StorageImage } from '@aws-amplify/ui-react-storage';
 
 const client = generateClient<Schema>();
 
@@ -79,6 +80,7 @@ const Profile = () => {
         const uploadedItem = await uploadData({
           data: file,
           path: `profile-pics/${file.name}`,
+          options: { bucket: 'profilepics' }, // Specify the target bucket
         }).result;
   
         // Access the path from the resolved value
@@ -119,7 +121,11 @@ const Profile = () => {
           <div className="avatar relative">
             <div className="w-24 mask mask-squircle">
               {photoUrl ? (
-                <img src={photoUrl} alt="Profile" />
+          <StorageImage
+            path={photoUrl}
+            alt="Profile Picture"
+            className="w-full h-full object-cover"
+          />
               ) : (
                 <img src="/public/pfp.webp" alt="Default profile picture" />
               )}

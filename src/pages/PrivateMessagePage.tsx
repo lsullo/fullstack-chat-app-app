@@ -629,13 +629,16 @@ useEffect(() => {
             )}
           >
             <div className="chat-header">
-              {msg.userNickname}
+            <span className={groupDetails?.chatstatus === 'Activated' ? 'text-white' : 'text-black'}>
+                {msg.userNickname}
+              </span>
               <time className="text-xs opacity-50"> {formatTime(msg.createdAt)}</time>
             </div>
             <p
               className={clsx(
                 'chat-bubble',
-                msg.owner !== user.username ? 'chat-bubble-accent' : 'chat-bubble-info'
+                msg.owner !== user.username ? 'chat-bubble-accent' : 'chat-bubble-info',
+                groupDetails?.chatstatus === 'Activated' ? 'text-white' : 'text-black' // Apply conditional styling to message text as well
               )}
             >
               {msg.content}
@@ -650,7 +653,9 @@ useEffect(() => {
             )}
           >
             <div className="chat-header">
-              {msg.userNickname}
+            <span className={groupDetails?.chatstatus === 'Activated' ? 'text-white' : 'text-black'}>
+                {msg.userNickname}
+              </span>
               <time className="text-xs opacity-50">{formatTime(msg.createdAt)}</time>
             </div>
             <StorageImage
@@ -658,7 +663,8 @@ useEffect(() => {
               alt=""
               className={clsx(
                 'chat-bubble',
-                msg.owner !== user.username ? 'chat-bubble-accent' : 'chat-bubble-info'
+                msg.owner !== user.username ? 'chat-bubble-accent' : 'chat-bubble-info',
+                groupDetails?.chatstatus === 'Activated' ? 'text-white' : 'text-black'
               )}
             />
           </div>

@@ -56,6 +56,7 @@ const GroupsPage = () => {
               email: userEmail,
               role: 'User',
               userNickname,
+              photoId: "public/pfp.webp" 
             });
           } 
         } catch (error) {
