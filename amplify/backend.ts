@@ -1,5 +1,5 @@
 //import { Policy, PolicyStatement, Effect } from "aws-cdk-lib/aws-iam";
-import { storage, anotherStorage } from "./storage/resource";
+import { storage } from "./storage/resource";
 import { defineBackend } from "@aws-amplify/backend";
 import { auth } from "./auth/resource";
 import { data } from "./data/resource";
@@ -9,7 +9,6 @@ export const backend = defineBackend({
   auth,
   data,
   storage,
-  anotherStorage,
   myLambdaFunction,
 });
 

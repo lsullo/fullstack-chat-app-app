@@ -20,49 +20,36 @@ const Profile = () => {
 
   useEffect(() => {
     const checkOwnershipAndFetchPhoto = async () => {
-      try {
-        if (user) {
-          const currentUrl = window.location.href;
-          const urlUserIndexId = new URL(currentUrl).pathname.split('/').pop();
+      if (user) {
+        const currentUrl = window.location.href;
+        const urlUserIndexId = new URL(currentUrl).pathname.split('/').filter(Boolean).pop();
 
-          if (urlUserIndexId) {
-            // Fetch UserIndex entry by URL ID
-            const userIndexResponse = await client.models.UserIndex.list({
-              filter: { id: { eq: urlUserIndexId } },
-            });
+        if (urlUserIndexId) {
+          const userIndexResponse = await client.models.UserIndex.list({
+            filter: { id: { eq: urlUserIndexId } },
+          });
 
-            if (userIndexResponse.data && userIndexResponse.data.length > 0) {
-              const userIndexEntry = userIndexResponse.data[0];
+          if (userIndexResponse.data.length > 0) {
+            const userIndexEntry = userIndexResponse.data[0];
+            const session = await fetchAuthSession();
+            const userId = session.tokens?.idToken?.payload.sub;
+            setIsOwner(userId === userIndexEntry.userId);
 
-              // Fetch current user session for ID comparison
-              const session = await fetchAuthSession();
-              const userId = session.tokens?.idToken?.payload.sub;
-
-              // Check ownership
-              setIsOwner(userId === userIndexEntry.userId);
-
-              // Fetch profile photo if available
-              if (userIndexEntry.photoId) {
-                const url = `/path/to/image/${userIndexEntry.photoId}`;
-                setPhotoUrl(url);
-              } else {
-                setPhotoUrl(null);
-              }
-
-              // Set username
-              setUsername(userIndexEntry.userNickname || 'No username available');
+            if (userIndexEntry.photoId) {
+              const url = `chat-pics/${userIndexEntry.photoId}`;
+              setPhotoUrl(url);
             } else {
-              console.error(`No UserIndex entry found for ID: ${urlUserIndexId}`);
+              setPhotoUrl(null);
             }
+            setUsername(userIndexEntry.userNickname || 'No username available');
           } else {
-            console.error('Invalid URL: Could not extract UserIndex ID.');
+            console.error(`No UserIndex entry found for ID: ${urlUserIndexId}`);
           }
+        } else {
+          console.error('Invalid URL: Could not extract UserIndex ID.');
         }
-      } catch (error) {
-        console.error('Error fetching profile data or photo:', error);
-      } finally {
-        setLoading(false);
       }
+      setLoading(false);
     };
 
     checkOwnershipAndFetchPhoto();
@@ -76,28 +63,26 @@ const Profile = () => {
     const file = e.target.files?.[0];
     if (file) {
       try {
-        // Upload the file and await the result
-        const uploadedItem = await uploadData({
+        const uploadTask = uploadData({
           data: file,
-          path: `profile-pics/${file.name}`,
-          options: { bucket: 'profilepics' }, // Specify the target bucket
-        }).result;
+          path: `chat-pics/${file.name}`,
+        });
   
-        // Access the path from the resolved value
+        const uploadedItem = await uploadTask.result;
+  
+        // Access the 'path' property from the result
         const photoId = uploadedItem.path;
   
-        // Update UserIndex with new photoId
         const currentUrl = window.location.href;
         const urlUserIndexId = new URL(currentUrl).pathname.split('/').pop();
   
         if (urlUserIndexId) {
           await client.models.UserIndex.update({
             id: urlUserIndexId,
-            photoId, // Directly update the `photoId`
+            photoId,
           });
   
-          // Update the UI with the new photo URL
-          setPhotoUrl(`/path/to/image/${photoId}`);
+          setPhotoUrl(photoId);
         }
       } catch (error) {
         console.error('Error uploading file or updating user index:', error);
@@ -105,6 +90,7 @@ const Profile = () => {
     }
   };
   
+
 
   if (loading) {
     return <div>Loading...</div>;
@@ -121,11 +107,11 @@ const Profile = () => {
           <div className="avatar relative">
             <div className="w-24 mask mask-squircle">
               {photoUrl ? (
-          <StorageImage
-            path={photoUrl}
-            alt="Profile Picture"
-            className="w-full h-full object-cover"
-          />
+                <StorageImage
+                  path={photoUrl}
+                  alt="Profile Picture"
+                  className="w-full h-full object-cover"
+                />
               ) : (
                 <img src="/public/pfp.webp" alt="Default profile picture" />
               )}

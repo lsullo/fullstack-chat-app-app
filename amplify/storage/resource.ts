@@ -8,9 +8,3 @@ export const storage = defineStorage({
 	}),
 	
 })
-export const anotherStorage = defineStorage({
-    name: 'profilepics',
-    access: (allow) => ({
-        'profile-pics/*': [allow.authenticated.to(['read', 'write'])],
-    }),
-});
