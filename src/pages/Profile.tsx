@@ -1,149 +1,142 @@
-import { useAuthenticator } from '@aws-amplify/ui-react';
-import { useEffect, useState, useRef } from 'react';
-import { generateClient } from 'aws-amplify/api';
+import React, { useState, useEffect, useRef } from 'react';
+import { useParams } from 'react-router-dom';
 import { Schema } from '../../amplify/data/resource';
-import { fetchAuthSession } from 'aws-amplify/auth';
-import { FaPen } from 'react-icons/fa';
+import { generateClient } from 'aws-amplify/api';
+//import { useAuthenticator } from '@aws-amplify/ui-react';
 import { uploadData } from 'aws-amplify/storage';
 import { StorageImage } from '@aws-amplify/ui-react-storage';
+import { fetchAuthSession } from 'aws-amplify/auth';
+import { FaPen } from 'react-icons/fa'; // Pen icon for editing
 
 const client = generateClient<Schema>();
 
-const Profile = () => {
-  const { user } = useAuthenticator((context) => [context.user]);
-  const [isOwner, setIsOwner] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true);
-  const [photoUrl, setPhotoUrl] = useState<string | null>(null);
-  const [username, setUsername] = useState<string | null>(null);
+const ProfilePage = () => {
+  //const { user } = useAuthenticator((context) => [context.user]);
+  const { userIndexId } = useParams<{ userIndexId: string }>(); // Get the UserIndex.id from the URL
+  const [profileData, setProfileData] = useState<Schema['UserIndex']['type'] | null>(null);
+  const [isOwner, setIsOwner] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-
+  // Fetch the profile data
   useEffect(() => {
-    const checkOwnershipAndFetchPhoto = async () => {
-      if (user) {
-        const currentUrl = window.location.href;
-        const urlUserIndexId = new URL(currentUrl).pathname.split('/').filter(Boolean).pop();
+    const fetchProfileData = async () => {
+      if (!userIndexId) {
+        setErrorMessage('Invalid profile ID');
+        return;
+      }
 
-        if (urlUserIndexId) {
-          const userIndexResponse = await client.models.UserIndex.list({
-            filter: { id: { eq: urlUserIndexId } },
-          });
+      try {
+        const userIndexResponse = await client.models.UserIndex.get({ id: userIndexId });
+        if (userIndexResponse.data) {
+          setProfileData(userIndexResponse.data);
 
-          if (userIndexResponse.data.length > 0) {
-            const userIndexEntry = userIndexResponse.data[0];
-            const session = await fetchAuthSession();
-            const userId = session.tokens?.idToken?.payload.sub;
-            setIsOwner(userId === userIndexEntry.userId);
+          // Fetch current user's ID
+          const session = await fetchAuthSession();
+          const currentUserId = session.tokens?.idToken?.payload.sub;
 
-            if (userIndexEntry.photoId) {
-              const url = `chat-pics/${userIndexEntry.photoId}`;
-              setPhotoUrl(url);
-            } else {
-              setPhotoUrl(null);
-            }
-            setUsername(userIndexEntry.userNickname || 'No username available');
-          } else {
-            console.error(`No UserIndex entry found for ID: ${urlUserIndexId}`);
+          if (currentUserId && userIndexResponse.data.userId === currentUserId) {
+            setIsOwner(true);
           }
         } else {
-          console.error('Invalid URL: Could not extract UserIndex ID.');
-        }
-      }
-      setLoading(false);
-    };
-
-    checkOwnershipAndFetchPhoto();
-  }, [user]);
-
-  const handleFilePickerClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      try {
-        const uploadTask = uploadData({
-          data: file,
-          path: `chat-pics/${file.name}`,
-        });
-  
-        const uploadedItem = await uploadTask.result;
-  
-        // Access the 'path' property from the result
-        const photoId = uploadedItem.path;
-  
-        const currentUrl = window.location.href;
-        const urlUserIndexId = new URL(currentUrl).pathname.split('/').pop();
-  
-        if (urlUserIndexId) {
-          await client.models.UserIndex.update({
-            id: urlUserIndexId,
-            photoId,
-          });
-  
-          setPhotoUrl(photoId);
+          setErrorMessage('Profile not found');
         }
       } catch (error) {
-        console.error('Error uploading file or updating user index:', error);
+        console.error('Error fetching profile data:', error);
+        setErrorMessage('Error fetching profile data');
       }
+    };
+
+    fetchProfileData();
+  }, [userIndexId]);
+
+  // Handle file input change
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const selectedFile = e.target.files[0];
+      handleUpload(selectedFile);
     }
   };
-  
 
+  // Handle image upload
+  const handleUpload = async (file: File) => {
+    try {
+      const uploadedItem = await uploadData({
+        data: file,
+        path: `chat-pics/${file.name}`,
+      }).result;
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
+      // Update UserIndex with new photoId
+      if (profileData) {
+        await client.models.UserIndex.update({
+          id: profileData.id,
+          photoId: uploadedItem.path, // Use 'photoId' instead of 'photoID'
+        });
+
+        // Update profileData state
+        setProfileData({ ...profileData, photoId: uploadedItem.path });
+      }
+    } catch (error) {
+      console.error('Error uploading image:', error);
+      setErrorMessage("Can't use that image");
+      // Keep photoId as null
+    }
+  };
+
+  // Open file input dialog
+  const openFileInput = () => {
+    if (fileInputRef.current) {
+      fileInputRef.current.click();
+    }
+  };
 
   return (
-    <div className="hero min-h-screen bg-base-200">
-      <div className="hero-content text-center">
-        <div className="max-w-md">
-          <h1 className="text-2xl font-bold">
-            {isOwner ? 'Your Profile' : `${username}'s Profile`}
-          </h1>
-          <p className="py-6">{username}</p>
-          <div className="avatar relative">
-            <div className="w-24 mask mask-squircle">
-              {photoUrl ? (
-                <StorageImage
-                  path={photoUrl}
-                  alt="Profile Picture"
-                  className="w-full h-full object-cover"
-                />
-              ) : (
-                <img src="/public/pfp.webp" alt="Default profile picture" />
-              )}
-            </div>
+    <div className="flex flex-col items-center min-h-screen bg-white">
+      {errorMessage && <div className="error text-red-600">{errorMessage}</div>}
+
+      {profileData ? (
+        <div className="w-full max-w-md p-6 space-y-4">
+          <div className="relative">
+            {profileData.photoId ? (
+              <StorageImage
+                path={profileData.photoId}
+                alt="Profile Picture"
+                className="w-32 h-32 rounded-full object-cover"
+              />
+            ) : (
+              <img src="/pfp.webp" alt="Profile" className="w-32 h-32 rounded-full object-cover" />
+            )}
             {isOwner && (
-              <>
-                <button
-                  className="absolute bottom-2 right-2 btn btn-sm btn-circle btn-primary"
-                  onClick={handleFilePickerClick}
-                >
-                  <FaPen />
-                </button>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleFileChange}
-                  className="hidden"
-                />
-              </>
+              <button
+                className="absolute bottom-0 right-0 p-2 bg-gray-200 rounded-full hover:bg-gray-300"
+                onClick={openFileInput}
+              >
+                <FaPen />
+              </button>
+            )}
+            {isOwner && (
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                style={{ display: 'none' }}
+              />
             )}
           </div>
-          {isOwner ? (
-            <div className="mt-4">
-              <button className="btn btn-primary">Edit Profile</button>
-            </div>
-          ) : (
-            <p className="mt-4 text-gray-600">You are viewing this profile as a guest.</p>
-          )}
+          <div className="text-center">
+            <h2 className="text-2xl font-bold">{profileData.userNickname}</h2>
+            <p className="text-gray-600">{profileData.email}</p>
+          </div>
         </div>
-      </div>
+      ) : (
+        !errorMessage && (
+          <div className="flex justify-center items-center h-screen">
+            <h1 className="text-2xl">Loading...</h1>
+          </div>
+        )
+      )}
     </div>
   );
 };
 
-export default Profile;
+export default ProfilePage;
