@@ -491,7 +491,7 @@ useEffect(() => {
   return (
     <div
       className={`flex flex-col min-h-screen ${
-        groupDetails?.chatstatus === "Activated" ? "bg-black" : "bg-white"
+        groupDetails?.chatstatus === "Activated" ? "bg-black" : "bg-white" 
       }`}
     >
       
@@ -630,8 +630,8 @@ useEffect(() => {
             <div className="chat-header">
             <span className={groupDetails?.chatstatus === 'Activated' ? 'text-white' : 'text-black'}>
                 {msg.userNickname}
-              </span>
               <time className="text-xs opacity-50 text-black-200"> {formatTime(msg.createdAt)}</time>
+              </span>
             </div>
             <p
               className={clsx(
@@ -654,8 +654,8 @@ useEffect(() => {
             <div className="chat-header">
             <span className={groupDetails?.chatstatus === 'Activated' ? 'text-white' : 'text-black'}>
                 {msg.userNickname}
-              </span>
               <time className="text-xs opacity-50 text-black-200">{formatTime(msg.createdAt)}</time>
+              </span>
             </div>
             <StorageImage
               path={msg.picId}
