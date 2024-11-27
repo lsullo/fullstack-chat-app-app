@@ -632,7 +632,7 @@ useEffect(() => {
             <span className={groupDetails?.chatstatus === 'Activated' ? 'text-white' : 'text-black'}>
                 {msg.userNickname}
               </span>
-              <time className="text-xs opacity-50"> {formatTime(msg.createdAt)}</time>
+              <time className="text-xs opacity-50 text-gray-500"> {formatTime(msg.createdAt)}</time>
             </div>
             <p
               className={clsx(
@@ -656,7 +656,7 @@ useEffect(() => {
             <span className={groupDetails?.chatstatus === 'Activated' ? 'text-white' : 'text-black'}>
                 {msg.userNickname}
               </span>
-              <time className="text-xs opacity-50">{formatTime(msg.createdAt)}</time>
+              <time className="text-xs opacity-50 text-gray-500">{formatTime(msg.createdAt)}</time>
             </div>
             <StorageImage
               path={msg.picId}
