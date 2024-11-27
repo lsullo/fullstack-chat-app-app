@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { generateClient } from 'aws-amplify/api';
 import { Schema } from '../../amplify/data/resource';
+import { StorageImage } from '@aws-amplify/ui-react-storage';
 
 const client = generateClient<Schema>();
 
 const GroupDetails = () => {
-  const { groupID } = useParams(); // Extract the group ID from the URL
+  const { groupID } = useParams(); 
   const [loading, setLoading] = useState(true);
   const [groupNotFound, setGroupNotFound] = useState(false);
   const [groupDetails, setGroupDetails] = useState<{
@@ -41,26 +42,25 @@ const GroupDetails = () => {
         const groupData = groupResponse.data;
         setGroupDetails({
           groupId: groupData.id,
-          groupname: groupData.groupname || 'Unnamed Group', // Default value
+          groupname: groupData.groupname || 'Unnamed Group', 
           adminId: groupData.adminId,
           chatstatus: groupData.chatstatus ?? 'Def',
         });
 
-        // Fetch all group users associated with the group ID
         const groupUsersResponse = await client.models.GroupUser.list({
           filter: { groupId: { eq: groupData.id } },
         });
 
-        // Fetch UserIndex data for each userId in group users
+
         const enrichedUsers = await Promise.all(
           groupUsersResponse.data.map(async (groupUser) => {
             const userIndexResponse = await client.models.UserIndex.list({
-              filter: { userId: { eq: groupUser.userId } }, // Use userId to fetch UserIndex
+              filter: { userId: { eq: groupUser.userId } }, 
             });
 
             const userIndex = userIndexResponse.data[0];
             return {
-              userIndexId: userIndex?.id || '', // Use the userIndexId for the profile link
+              userIndexId: userIndex?.id || '', 
               userId: groupUser.userId,
               userNickname: userIndex?.userNickname || 'Anonymous',
               photoUrl: userIndex?.photoId || null,
@@ -113,13 +113,17 @@ const GroupDetails = () => {
         </div>
         <div className="w-full mt-6">
           <h2 className="text-2xl font-bold mb-4">Group Members</h2>
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-wrap gap-4 rounded-full">
             {groupUsers.map((user) => (
               <div key={user.userIndexId} className="card w-64 bg-white shadow-md p-4">
-                <div className="avatar w-16 h-16 rounded-full mb-4 mx-auto">
-                  {user.photoUrl ? (
-                    <img src={user.photoUrl} alt={`${user.userNickname}'s profile`} />
-                  ) : (
+                <div className="avatar w-16 h-16 mask mask-squircle mb-4 mx-auto">
+                {user.photoUrl ? (
+                <StorageImage
+                  path={user.photoUrl}
+                  alt="Profile Picture"
+                  className="w-full h-full object-cover "
+                />
+              ) : (
                     <img src="/public/pfp.webp" alt="Default profile picture" />
                   )}
                 </div>
