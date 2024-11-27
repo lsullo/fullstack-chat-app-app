@@ -28,7 +28,6 @@ const ProfilePage = () => {
         if (userIndexResponse.data) {
           setProfileData(userIndexResponse.data);
 
-          // Fetch current user's ID
           const session = await fetchAuthSession();
           const currentUserId = session.tokens?.idToken?.payload.sub;
 
@@ -47,7 +46,6 @@ const ProfilePage = () => {
     fetchProfileData();
   }, [userIndexId]);
 
-  // Handle file input change
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
@@ -55,7 +53,6 @@ const ProfilePage = () => {
     }
   };
 
-  // Handle image upload
   const handleUpload = async (file: File) => {
     try {
       const uploadedItem = await uploadData({
@@ -63,28 +60,23 @@ const ProfilePage = () => {
         path: `chat-pics/${file.name}`,
       }).result;
 
-      // Update UserIndex with new photoId
       if (profileData) {
         await client.models.UserIndex.update({
           id: profileData.id,
           photoId: uploadedItem.path,
         });
 
-        // Update profileData state
         setProfileData({ ...profileData, photoId: uploadedItem.path });
       }
     } catch (error) {
       console.error('Error uploading image:', error);
       setErrorMessage("Can't use that image");
-      // Clear the error message after 3777 milliseconds
       setTimeout(() => {
         setErrorMessage('');
       }, 3777);
-      // Keep photoId as null
     }
   };
 
-  // Open file input dialog
   const openFileInput = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();

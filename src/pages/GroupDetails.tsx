@@ -31,7 +31,6 @@ const GroupDetails = () => {
   useEffect(() => {
     const fetchGroupDetails = async () => {
       try {
-        // Fetch the group details
         const groupResponse = await client.models.Group.get({ id: groupID || '' });
         if (!groupResponse.data) {
           setGroupNotFound(true);
