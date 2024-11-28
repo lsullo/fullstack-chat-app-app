@@ -123,7 +123,7 @@ const GroupDetails = () => {
                   className="w-full h-full object-cover "
                 />
               ) : (
-                    <img src="/public/pfp.webp" alt="Default profile picture" />
+                    <img src="/monkey.png" alt="Default profile picture" />
                   )}
                 </div>
                 <div className="text-center">

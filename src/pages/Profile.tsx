@@ -102,7 +102,7 @@ const ProfilePage = () => {
                   className="w-full h-full object-cover"
                 />
               ) : (
-                <img src="/pfp.webp" alt="Profile" className="w-full h-full object-cover" />
+                <img src="/monkey.png" alt="Profile" className="w-full h-full object-cover" />
               )}
             </div>
             {isOwner && (
