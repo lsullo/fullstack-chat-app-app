@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from 'react';
+import React, { FormEvent, useEffect, useRef, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Schema } from '../../amplify/data/resource';
 import { generateClient } from 'aws-amplify/api';
@@ -6,7 +6,7 @@ import { useAuthenticator } from '@aws-amplify/ui-react';
 import { uploadData } from 'aws-amplify/storage';
 import { StorageImage } from '@aws-amplify/ui-react-storage';
 import { fetchAuthSession } from 'aws-amplify/auth';
-import { FaSignOutAlt, FaPlus, FaUserSecret } from 'react-icons/fa'; 
+import { FaSignOutAlt, FaPlus, FaUserSecret } from 'react-icons/fa';
 import clsx from 'clsx';
 
 const client = generateClient<Schema>();
@@ -41,39 +41,45 @@ const PrivateMessagePage = () => {
   const [isUserInGroup, setIsUserInGroup] = useState(true);
   const [loading, setLoading] = useState(true);
   const [loadingfr, setLoadingfr] = useState(false);
-  const [fetchedUsers, setFetchedUsers] = useState<string[]>([]);
+  const [fetchedUsers, setFetchedUsers] = useState<
+    Array<{ userId: string; userNickname: string; userIndexId: string }>
+  >([]);
   const [loadingNicknames, setLoadingNicknames] = useState(true);
   const [groupNotFound, setGroupNotFound] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isPopup2Open, setIsPopup2Open] = useState(false);
-  const [emailInput, setEmailInput] = useState(''); 
-  const [memberEmails, setMemberEmails] = useState<string[]>([]); 
+  const [emailInput, setEmailInput] = useState('');
+  const [memberEmails, setMemberEmails] = useState<string[]>([]);
+  const [userIdToIndexIdMap, setUserIdToIndexIdMap] = useState<{
+    [userId: string]: string;
+  }>({});
 
   const handlePaymentLinkClick = async () => {
     const currentUrl = window.location.href;
     const stripeUrl = `https://buy.stripe.com/test_5kA28o5TpeLY9peeUU`;
-  
+
     try {
       setLoadingfr(true);
       const { tokens } = await fetchAuthSession();
-  
+
       const userId = tokens?.idToken?.payload.sub;
       if (userId) {
         const userIndexResponse = await client.models.UserIndex.list({
           filter: { userId: { eq: userId } },
         });
-  
+
         if (userIndexResponse.data.length > 0) {
           const userIndexEntry = userIndexResponse.data[0];
-  
+
           await client.models.UserIndex.update({
             id: userIndexEntry.id,
             recentgroup: currentUrl,
           });
 
-          const stripeUrl2 = `${stripeUrl}?client_reference_id=${encodeURIComponent(userId)}`;
+          const stripeUrl2 = `${stripeUrl}?client_reference_id=${encodeURIComponent(
+            userId
+          )}`;
 
-  
           window.location.href = stripeUrl2;
         }
       }
@@ -82,29 +88,28 @@ const PrivateMessagePage = () => {
       setLoadingfr(false);
     }
   };
-  
-  
+
   const openPopup = () => setIsPopupOpen(true);
   const closePopup = () => setIsPopupOpen(false);
 
   const openPopup2 = () => setIsPopup2Open(true);
   const closePopup2 = () => setIsPopup2Open(false);
-  
+
   const [isOverLimit, setIsOverLimit] = useState(false);
   const [shake, setShake] = useState(false);
   const shakeAnimation = {
     animation: 'shake 0.5s',
   };
-  
+
   const inputStyles = {
     border: '1px solid',
     borderColor: 'transparent',
   };
-  
+
   const errorStyles = {
     borderColor: 'red',
   };
-  
+
   const handleEmailInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmailInput(e.target.value);
   };
@@ -128,20 +133,19 @@ const PrivateMessagePage = () => {
       console.warn('Group ID missing.');
       return;
     }
- 
+
     if (emailInput.trim() !== '') {
       setMemberEmails((prevEmails) => [...prevEmails, emailInput.trim()]);
-      setEmailInput(''); 
+      setEmailInput('');
     }
     const updatedMemberEmails = [...memberEmails, emailInput.trim()];
-  
+
     for (const email of updatedMemberEmails) {
       try {
-
         const userIndexResponse = await client.models.UserIndex.list({
           filter: { email: { eq: email } },
         });
-  
+
         if (userIndexResponse.data.length > 0) {
           const user = userIndexResponse.data[0];
           const existingGroupUserResponse = await client.models.GroupUser.list({
@@ -174,33 +178,32 @@ const PrivateMessagePage = () => {
         console.error(`Error adding user ${email} to group:`, error);
       }
     }
-  
+
     navigate(`/groups/${groupDetails?.groupId}`);
     closePopup();
     window.location.reload();
   };
-  
 
   const handleLeaveGroup = async (e: FormEvent) => {
     e.preventDefault();
 
     if (!groupDetails?.groupId || !fetchedUserId) return;
-  
+
     try {
       const groupUserResponse = await client.models.GroupUser.list({
         filter: { groupId: { eq: groupDetails.groupId }, userId: { eq: fetchedUserId } },
       });
-  
+
       if (groupUserResponse.data.length > 0) {
-        const groupUser = groupUserResponse.data[0]; 
-  
+        const groupUser = groupUserResponse.data[0];
+
         await client.models.GroupUser.delete({ id: groupUser.id });
-  
+
         await client.models.GroupMessage.create({
           groupId: groupDetails.groupId,
           type: 'system',
           content: `${userNickname} has left the group`,
-          userNickname: userNickname, 
+          userNickname: userNickname,
         });
 
         navigate('/groups');
@@ -210,80 +213,75 @@ const PrivateMessagePage = () => {
       console.error('Error:', error);
     }
   };
-  
+
   useEffect(() => {
     const subscribeToUserLeave = () => {
       if (groupDetails?.groupId) {
-        const groupUserSub = client.models.GroupUser.onDelete({
-          filter: {
-            groupId: { eq: groupDetails.groupId },
-          },
-        }).subscribe({
-          next: async (groupUser) => {
-            if (groupUser && groupUser.userNickname) {
-              
-              setFetchedUsers((prevUsers) => prevUsers.filter(user => user !== groupUser.userNickname));
-              const updatedUsersList = fetchedUsers.filter(user => user !== groupUser.userNickname);
-            
-            if (updatedUsersList.length === 0) {
-              window.location.reload();
-            }
-            }
-          },
-          error: (error) => console.error('Error:', error),
-        });
-  
-        return () => groupUserSub.unsubscribe(); 
-      }
-    };
-  
-    const unsubscribe = subscribeToUserLeave();
-    return unsubscribe;
-  }, [groupDetails?.groupId]);
-  
+        const groupUserSub = client.models.GroupUser
+          .onDelete({
+            filter: {
+              groupId: { eq: groupDetails.groupId },
+            },
+          })
+          .subscribe({
+            next: async (groupUser) => {
+              if (groupUser && groupUser.userNickname) {
+                setFetchedUsers((prevUsers) =>
+                  prevUsers.filter(
+                    (user) => user.userNickname !== groupUser.userNickname
+                  )
+                );
+                const updatedUsersList = fetchedUsers.filter(
+                  (user) => user.userNickname !== groupUser.userNickname
+                );
 
-  useEffect(() => {
-    if (user) {
-      fetchAuthSession().then((session) => {
-        setFetchedUserId(session.tokens?.idToken?.payload.sub as string);
-      });
-    } else {
-      setFetchedUserId('');
-    }
-  }, [user]);
-
-  useEffect(() => {
-    const fetchGroupUsers = async () => {
-      if (groupDetails?.groupId) {
-        try {
-          setLoadingNicknames(true);
-
-          const groupUserResponse = await client.models.GroupUser.list({
-            filter: { groupId: { eq: groupDetails.groupId } },
+                if (updatedUsersList.length === 0) {
+                  window.location.reload();
+                }
+              }
+            },
+            error: (error) => console.error('Error:', error),
           });
 
-          const usersList = groupUserResponse.data
-            .map((groupUser) => groupUser.userNickname)
-            .filter((nickname): nickname is string => nickname !== null && nickname !== undefined);
-
-          setFetchedUsers(usersList);
-        } catch (error) {
-          console.error('Error:', error);
-        } finally {
-          setLoadingNicknames(false);
-        }
+        return () => groupUserSub.unsubscribe();
       }
     };
 
-    if (groupDetails?.groupId) {
-      fetchGroupUsers();
-    }
-  }, [groupDetails]);
+    const unsubscribe = subscribeToUserLeave();
+    return unsubscribe;
+  }, [groupDetails?.groupId, fetchedUsers]);
+
+  useEffect(() => {
+    const fetchUserDetails = async () => {
+      try {
+        const session = await fetchAuthSession();
+        const currentUserId = session.tokens?.idToken?.payload.sub;
+
+        if (currentUserId) {
+          setFetchedUserId(currentUserId);
+          const userIndexResponse = await client.models.UserIndex.list({
+            filter: { userId: { eq: currentUserId } },
+          });
+
+          if (userIndexResponse.data.length > 0) {
+            const latestNickname = userIndexResponse.data[0].userNickname || '';
+            setUserNickname(latestNickname);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user details:', error);
+      }
+    };
+
+    fetchUserDetails();
+  }, []);
 
   useEffect(() => {
     const fetchGroupUsers = async () => {
       if (groupDetails?.groupId && fetchedUserId) {
         try {
+          setLoadingNicknames(true);
+
           const groupUserResponse = await client.models.GroupUser.list({
             filter: { groupId: { eq: groupDetails.groupId } },
           });
@@ -294,16 +292,50 @@ const PrivateMessagePage = () => {
 
           setIsUserInGroup(isUserInGroup);
 
-          const usersList = groupUserResponse.data
-            .map((groupUser) => groupUser.userNickname)
-            .filter((nickname): nickname is string => nickname !== null && nickname !== undefined);
+          const usersList: Array<{
+            userId: string;
+            userNickname: string;
+            userIndexId: string;
+          }> = [];
+          const userIdToIndexId: { [userId: string]: string } = {};
+
+          for (const groupUser of groupUserResponse.data) {
+            if (groupUser.userNickname) {
+
+              const userIndexResponse = await client.models.UserIndex.list({
+                filter: { userId: { eq: groupUser.userId } },
+              });
+
+              if (userIndexResponse.data.length > 0) {
+                const userIndex = userIndexResponse.data[0];
+                usersList.push({
+                  userId: groupUser.userId,
+                  userNickname: groupUser.userNickname,
+                  userIndexId: userIndex.id,
+                });
+
+                userIdToIndexId[groupUser.userId] = userIndex.id;
+              } else {
+                usersList.push({
+                  userId: groupUser.userId,
+                  userNickname: groupUser.userNickname,
+                  userIndexId: '',
+                });
+
+                userIdToIndexId[groupUser.userId] = '';
+              }
+            }
+          }
 
           setFetchedUsers(usersList);
+          setUserIdToIndexIdMap(userIdToIndexId);
 
           setLoading(false);
         } catch (error) {
           console.error('Error:', error);
           setLoading(false);
+        } finally {
+          setLoadingNicknames(false);
         }
       }
     };
@@ -318,14 +350,13 @@ const PrivateMessagePage = () => {
     client.models.Group.listGroupByGroupUrlName(
       { groupUrlName: groupID },
       {
-        selectionSet: ['id', 'groupname', 'adminId', 'messages.*','chatstatus'],
+        selectionSet: ['id', 'groupname', 'adminId', 'messages.*', 'chatstatus'],
       }
     ).then(({ data }) => {
-
       if (data.length === 0) {
-        setGroupNotFound(true); 
+        setGroupNotFound(true);
         setLoading(false);
-        return; 
+        return;
       }
 
       data[0].messages.sort(
@@ -337,42 +368,33 @@ const PrivateMessagePage = () => {
         groupname: data[0].groupname,
         adminId: data[0].adminId,
         chatstatus: data[0].chatstatus ?? 'Def',
-        
       });
     });
   }, [groupID]);
 
-
   useEffect(() => {
-    fetchAuthSession().then((user2) => {
-      setUserNickname(user2.tokens?.idToken?.payload['nickname'] as string);
-    });
-  }, []);
+    const subscribeToGroupMessages = () => {
+      if (groupDetails?.groupId) {
+        const sub = client.models.GroupMessage
+          .onCreate({
+            filter: {
+              groupId: { eq: groupDetails.groupId },
+            },
+          })
+          .subscribe({
+            next: (data) => {
+              setMsgs((prev) => [...prev, { ...data }]);
+            },
+            error: (error) => console.warn(error),
+          });
 
-useEffect(() => {
-  const subscribeToGroupMessages = () => {
-    if (groupDetails?.groupId) {
-      const sub = client.models.GroupMessage.onCreate({
-        filter: {
-          groupId: { eq: groupDetails.groupId }, 
-        },
-      }).subscribe({
-        next: (data) => {
-          setMsgs((prev) => [...prev, { ...data }]); 
-        },
-        error: (error) => console.warn(error),
-      });
+        return () => sub.unsubscribe();
+      }
+    };
 
-      return () => sub.unsubscribe();
-    }
-  };
-
-  const unsubscribe = subscribeToGroupMessages();
-  return unsubscribe;
-}, [groupDetails?.groupId]);
-
-
-
+    const unsubscribe = subscribeToGroupMessages();
+    return unsubscribe;
+  }, [groupDetails?.groupId]);
 
   useEffect(() => {
     if (messagesEndRef.current) {
@@ -382,15 +404,15 @@ useEffect(() => {
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
+
     if (msgText.length > 500) {
-      setIsOverLimit(true); 
-      setShake(true); 
+      setIsOverLimit(true);
+      setShake(true);
       setTimeout(() => {
-        setShake(false); 
-        setIsOverLimit(false); 
-    }, 500); 
-      return; 
+        setShake(false);
+        setIsOverLimit(false);
+      }, 500);
+      return;
     }
     setIsOverLimit(false);
 
@@ -399,12 +421,26 @@ useEffect(() => {
       return;
     }
 
+    let latestUserNickname = userNickname;
+    try {
+      const userIndexResponse = await client.models.UserIndex.list({
+        filter: { userId: { eq: fetchedUserId } },
+      });
+
+      if (userIndexResponse.data.length > 0) {
+        latestUserNickname = userIndexResponse.data[0].userNickname || '';
+        setUserNickname(latestUserNickname);
+      }
+    } catch (error) {
+      console.error('Error fetching latest userNickname:', error);
+    }
+
     if (msgText) {
       await client.models.GroupMessage.create({
-        groupId: groupDetails?.groupId as string,
+        groupId: groupDetails.groupId,
         type: 'text',
         content: msgText,
-        userNickname,
+        userNickname: latestUserNickname,
       });
 
       setMsgText('');
@@ -412,15 +448,15 @@ useEffect(() => {
 
     if (msgFile) {
       const uploadedItem = await uploadData({
-          data: msgFile,
-          path: `chat-pics/${msgFile.name}`,
+        data: msgFile,
+        path: `chat-pics/${msgFile.name}`,
       }).result;
 
       await client.models.GroupMessage.create({
-          groupId: groupDetails?.groupId as string,
-          type: 'image',
-          picId: uploadedItem.path,
-          userNickname,
+        groupId: groupDetails?.groupId as string,
+        type: 'image',
+        picId: uploadedItem.path,
+        userNickname: latestUserNickname,
       });
 
       setMsgFile(null);
@@ -451,7 +487,9 @@ useEffect(() => {
         <div className="hero-content text-center">
           <div className="max-w-md">
             <h1 className="text-3xl font-bold text-red-600">Group Does Not Exist</h1>
-            <p>The group you are trying to access does not exist or may have been deleted.</p>
+            <p>
+              The group you are trying to access does not exist or may have been deleted.
+            </p>
             <Link to="/" className="btn btn-primary mt-4">
               Return Home
             </Link>
@@ -477,7 +515,7 @@ useEffect(() => {
   }
   const renderChatName = () => {
     if (!groupDetails?.groupname || !groupDetails?.groupId) return null;
-  
+
     return (
       <Link
         to={`/groupdetails/${groupDetails.groupId}`}
@@ -487,48 +525,52 @@ useEffect(() => {
       </Link>
     );
   };
-  
+
   return (
+    
     <div
       className={`flex flex-col min-h-screen ${
-        groupDetails?.chatstatus === "Activated" ? "bg-black" : "bg-white" 
+        groupDetails?.chatstatus === 'Activated' ? 'bg-black' : 'bg-white'
       }`}
     >
-      
       <div className="bg-gray-100 flex justify-between items-center p-4 shadow-md">
-      
         {loadingNicknames ? (
           <span className="user-nicknames text-primary-content"></span>
         ) : (
-          <span className="user-nicknames text-primary-content">{fetchedUsers.join(', ')}</span>
+          <span className="user-nicknames text-primary-content">
+            {fetchedUsers.map((user, index) => (
+              <React.Fragment key={user.userId}>
+                <Link to={`/profile/${user.userIndexId}`}>{user.userNickname}</Link>
+                {index < fetchedUsers.length - 1 ? ', ' : ''}
+              </React.Fragment>
+            ))}
+          </span>
         )}
 
-      <div className="absolute left-1/2 transform -translate-x-1/2">
-        {renderChatName()}
-      </div>
-        
+        <div className="absolute left-1/2 transform -translate-x-1/2">
+          {renderChatName()}
+        </div>
+
         <div className="flex items-center space-x-2">
-    {isUserInGroup && groupDetails?.adminId !== fetchedUserId && (
-      <FaSignOutAlt
-        className="text-red-600 text-xl"
-        onClick={openPopup2}
-      />
-    )}
-   <FaPlus
-        className="text-red-600 text-xl"
-        onClick={openPopup}
-      />
-      <a onClick={handlePaymentLinkClick} className="text-yellow-600 text-xl">
-      {groupDetails?.adminId && groupDetails?.chatstatus !== "Activated" && (
-          <FaUserSecret/>
-        )}
-      </a>
-  
-  </div>
+          {isUserInGroup && groupDetails?.adminId !== fetchedUserId && (
+            <FaSignOutAlt className="text-red-600 text-xl" onClick={openPopup2} />
+          )}
+          <FaPlus className="text-red-600 text-xl" onClick={openPopup} />
+          <a onClick={handlePaymentLinkClick} className="text-yellow-600 text-xl">
+            {groupDetails?.adminId && groupDetails?.chatstatus !== 'Activated' && (
+              <FaUserSecret />
+            )}
+          </a>
+        </div>
       </div>
-  
-      <div className="flex-1 overflow-y-auto p-6 space-y-4">
 
+      <div
+            className="flex-1 overflow-y-auto p-6 space-y-4"
+            style={{
+              maxHeight: '120vh',
+              overflowY: 'auto',
+            }}
+          >
         {isPopupOpen && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-65 z-50">
             <div className="bg-white p-6 rounded-md shadow-md">
@@ -544,7 +586,10 @@ useEffect(() => {
                 />
                 <div className="flex flex-wrap mt-2">
                   {memberEmails.map((email) => (
-                    <div key={email} className="bg-gray-200 p-2 m-1 rounded flex items-center">
+                    <div
+                      key={email}
+                      className="bg-gray-200 p-2 m-1 rounded flex items-center"
+                    >
                       <span>{email}</span>
                       <button
                         type="button"
@@ -557,7 +602,11 @@ useEffect(() => {
                   ))}
                 </div>
                 <div className="flex justify-center space-x-2 mt-4">
-                  <button type="button" onClick={closePopup} className="btn btn-secondary">
+                  <button
+                    type="button"
+                    onClick={closePopup}
+                    className="btn btn-secondary"
+                  >
                     Cancel
                   </button>
                   <button type="submit" className="btn btn-primary">
@@ -568,127 +617,170 @@ useEffect(() => {
             </div>
           </div>
         )}
-          {isPopup2Open && (
-    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-65 z-50">
-      <div className="bg-white p-6 rounded-md shadow-md">
-        <h2 className="text-xl mb-4">Are you sure you want to leave group?</h2>
-        <form onSubmit={handleLeaveGroup}>
-          <div className="flex justify-center space-x-2 mt-4">
-            <button type="button" onClick={closePopup2} className="btn btn-secondary">
-              Cancel
-            </button>
-            <button type="submit" className="btn btn-primary">
-            Leave Group
-          </button>
-
-          </div>
-        </form>
-      </div>
-    </div>
-  )}
-
-<style>
-  {`
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      25% { transform: translateX(-5px); }
-      50% { transform: translateX(5px); }
-      75% { transform: translateX(-5px); }
-    }
-  `}
-</style>
-
-        {/* Chat messages */}
-        {msgs.map((msg) => (
-      <div
-      key={msg.id}
-      className={clsx(
-        'w-full flex',
-        msg.owner !== user.username ? 'justify-start' : 'justify-end',
-        msg.type === 'system' ? 'justify-center' : '',
-      )}
-    >
-      {msg.type === 'system' ? (
-        <div
-          className={clsx(
-            'text-center w-full',
-            groupDetails?.chatstatus === 'Activated' ? 'text-white' : 'text-gray-500'
-          )}
-        >
-          <p className="text-sm italic">{msg.content}</p>
-          <time className="text-xs opacity-50 text-black-200">{formatTime(msg.createdAt)}</time>
-        </div>
-    ) : (
-      <>
-        {msg.content && (
-          <div
-            className={clsx(
-              'chat max-w-xl w-1/3',
-              msg.owner !== user.username ? 'chat-start' : 'chat-end'
-            )}
-          >
-            <div className="chat-header">
-            <span className={groupDetails?.chatstatus === 'Activated' ? 'text-white' : 'text-black'}>
-                {msg.userNickname}
-              <time className="text-xs opacity-50 text-black-200"> {formatTime(msg.createdAt)}</time>
-              </span>
+        {isPopup2Open && (
+          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-65 z-50">
+            <div className="bg-white p-6 rounded-md shadow-md">
+              <h2 className="text-xl mb-4">
+                Are you sure you want to leave group?
+              </h2>
+              <form onSubmit={handleLeaveGroup}>
+                <div className="flex justify-center space-x-2 mt-4">
+                  <button
+                    type="button"
+                    onClick={closePopup2}
+                    className="btn btn-secondary"
+                  >
+                    Cancel
+                  </button>
+                  <button type="submit" className="btn btn-primary">
+                    Leave Group
+                  </button>
+                </div>
+              </form>
             </div>
-            <p
+          </div>
+        )}
+
+        <style>
+          {`
+        @keyframes shake {
+          0%, 100% { transform: translateX(0); }
+          25% { transform: translateX(-5px); }
+          50% { transform: translateX(5px); }
+          75% { transform: translateX(-5px); }
+        }
+      `}
+        </style>
+        {/* Chat messages */}
+        {msgs.map((msg) => {
+          const userIndexId = msg.owner ? userIdToIndexIdMap[msg.owner] || '' : '';
+
+          return (
+            
+            <div
+              key={msg.id}
               className={clsx(
-                'chat-bubble',
-                msg.owner !== user.username ? 'chat-bubble-accent' : 'chat-bubble-info',
-                groupDetails?.chatstatus === 'Activated' ? 'text-white' : 'text-black' 
+                'w-full flex',
+                msg.owner !== user.username ? 'justify-start' : 'justify-end',
+                msg.type === 'system' ? 'justify-center' : ''
               )}
             >
-              {msg.content}
-            </p>
-          </div>
-        )}
-        {msg.picId && (
-          <div
-            className={clsx(
-              'chat max-w-xl w-1/3',
-              msg.owner !== user.username ? 'chat-start' : 'chat-end'
-            )}
-          >
-            <div className="chat-header">
-            <span className={groupDetails?.chatstatus === 'Activated' ? 'text-white' : 'text-black'}>
-                {msg.userNickname}
-              <time className="text-xs opacity-50 text-black-200">{formatTime(msg.createdAt)}</time>
-              </span>
-            </div>
-            <StorageImage
-              path={msg.picId}
-              alt=""
-              className={clsx(
-                'chat-bubble',
-                msg.owner !== user.username ? 'chat-bubble-accent' : 'chat-bubble-info',
-                groupDetails?.chatstatus === 'Activated' ? 'text-white' : 'text-black'
+              {msg.type === 'system' ? (
+                <div className="text-center w-full opacity-50 text-black-200">
+                  <p className="text-sm italic">{msg.content}</p>
+                  <time className="text-xs opacity-50 text-black-200">
+                    {formatTime(msg.createdAt)}
+                  </time>
+                </div>
+              ) : (
+                <>
+                  {msg.content && (
+                    <div
+                      className={clsx(
+                        'chat max-w-xl w-1/3',
+                        msg.owner !== user.username ? 'chat-start' : 'chat-end'
+                      )}
+                    >
+                      <div className="chat-header">
+                        <span
+                          className={
+                            groupDetails?.chatstatus === 'Activated'
+                              ? 'text-white'
+                              : 'text-black'
+                          }
+                        >
+                          {userIndexId ? (
+                            <Link to={`/profile/${userIndexId}`}>
+                              {msg.userNickname}
+                            </Link>
+                          ) : (
+                            msg.userNickname
+                          )}
+                          <time className="text-xs opacity-50 text-black-200">
+                            {' '}
+                            {formatTime(msg.createdAt)}
+                          </time>
+                        </span>
+                      </div>
+                      <p
+                        className={clsx(
+                          'chat-bubble',
+                          msg.owner !== user.username
+                            ? 'chat-bubble-accent'
+                            : 'chat-bubble-info',
+                          groupDetails?.chatstatus === 'Activated'
+                            ? 'text-white'
+                            : 'text-black'
+                        )}
+                      >
+                        {msg.content}
+                      </p>
+                    </div>
+                  )}
+                  {msg.picId && (
+                    <div
+                      className={clsx(
+                        'chat max-w-xl w-1/3',
+                        msg.owner !== user.username ? 'chat-start' : 'chat-end'
+                      )}
+                    >
+                      <div className="chat-header">
+                        <span
+                          className={
+                            groupDetails?.chatstatus === 'Activated'
+                              ? 'text-white'
+                              : 'text-black'
+                          }
+                        >
+                          {userIndexId ? (
+                            <Link to={`/profile/${userIndexId}`}>
+                              {msg.userNickname}
+                            </Link>
+                          ) : (
+                            msg.userNickname
+                          )}
+                          <time className="text-xs opacity-50 text-black-200">
+                            {formatTime(msg.createdAt)}
+                          </time>
+                        </span>
+                      </div>
+                      <StorageImage
+                        path={msg.picId}
+                        alt=""
+                        className={clsx(
+                          'chat-bubble',
+                          msg.owner !== user.username
+                            ? 'chat-bubble-accent'
+                            : 'chat-bubble-info',
+                          groupDetails?.chatstatus === 'Activated'
+                            ? 'text-white'
+                            : 'text-black'
+                        )}
+                      />
+                    </div>
+                  )}
+                </>
               )}
-            />
-          </div>
-        )}
-      </>
-    )}
-  </div>
-))}
+            </div>
+          );
+        })}
 
         <div ref={messagesEndRef} />
       </div>
-  
+
       <form onSubmit={handleSubmit} className="bg-info py-4 px-6 flex items-center">
-            <input
-        className={clsx('flex-1 input')}
-        style={{
-          ...inputStyles, 
-          ...(isOverLimit ? errorStyles : {}),
-          ...(shake ? shakeAnimation : {}),
-        }}
-        placeholder="Type your message..."
-        type="text"
-        value={msgText}
-        onChange={(e) => setMsgText(e.target.value)}
-      />
+        <input
+          className={clsx('flex-1 input')}
+          style={{
+            ...inputStyles,
+            ...(isOverLimit ? errorStyles : {}),
+            ...(shake ? shakeAnimation : {}),
+          }}
+          placeholder="Type your message..."
+          type="text"
+          value={msgText}
+          onChange={(e) => setMsgText(e.target.value)}
+        />
 
         <input
           type="file"
@@ -702,6 +794,6 @@ useEffect(() => {
       </form>
     </div>
   );
- }
+};
 
 export default PrivateMessagePage;

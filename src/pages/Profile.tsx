@@ -16,6 +16,11 @@ const ProfilePage = () => {
   const [errorMessage, setErrorMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
+  const [isEditingNickname, setIsEditingNickname] = useState(false);
+  const [newNickname, setNewNickname] = useState('');
+  const [isEditingBio, setIsEditingBio] = useState(false);
+  const [newBio, setNewBio] = useState('');
+
   useEffect(() => {
     const fetchProfileData = async () => {
       if (!userIndexId) {
@@ -63,10 +68,13 @@ const ProfilePage = () => {
       if (profileData) {
         await client.models.UserIndex.update({
           id: profileData.id,
+          userId: profileData.userId,  
+          email: profileData.email,    
           photoId: uploadedItem.path,
         });
 
-        setProfileData({ ...profileData, photoId: uploadedItem.path });
+        const updatedProfileResponse = await client.models.UserIndex.get({ id: profileData.id });
+        setProfileData(updatedProfileResponse.data);
       }
     } catch (error) {
       console.error('Error uploading image:', error);
@@ -80,6 +88,77 @@ const ProfilePage = () => {
   const openFileInput = () => {
     if (fileInputRef.current) {
       fileInputRef.current.click();
+    }
+  };
+
+  const handleNicknameEdit = () => {
+    setIsEditingNickname(true);
+    setNewNickname(profileData?.userNickname || '');
+  };
+
+  const handleNicknameSave = async () => {
+    if (!profileData) return;
+
+    try {
+
+      await client.models.UserIndex.update({
+        id: profileData.id,
+        userId: profileData.userId,  
+        email: profileData.email,    
+        userNickname: newNickname,
+      });
+
+      const groupUserResponse = await client.models.GroupUser.list({
+        filter: { userId: { eq: profileData.userId } },
+      });
+
+      for (const groupUser of groupUserResponse.data) {
+        await client.models.GroupUser.update({
+          id: groupUser.id,
+          userNickname: newNickname,
+        });
+      }
+
+      const updatedProfileResponse = await client.models.UserIndex.get({ id: profileData.id });
+      setProfileData(updatedProfileResponse.data);
+
+      setIsEditingNickname(false);
+      window.location.reload();
+    } catch (error) {
+      console.error('Error updating nickname:', error);
+      setErrorMessage('Error updating nickname');
+      setTimeout(() => {
+        setErrorMessage('');
+      }, 3777);
+    }
+  };
+
+  const handleBioEdit = () => {
+    setIsEditingBio(true);
+    setNewBio(profileData?.bio || '');
+  };
+
+  const handleBioSave = async () => {
+    if (!profileData) return;
+
+    try {
+      await client.models.UserIndex.update({
+        id: profileData.id,
+        userId: profileData.userId,  
+        email: profileData.email,    
+        bio: newBio,
+      });
+
+      const updatedProfileResponse = await client.models.UserIndex.get({ id: profileData.id });
+      setProfileData(updatedProfileResponse.data);
+
+      setIsEditingBio(false);
+    } catch (error) {
+      console.error('Error updating bio:', error);
+      setErrorMessage('Error updating bio');
+      setTimeout(() => {
+        setErrorMessage('');
+      }, 3777);
     }
   };
 
@@ -125,8 +204,75 @@ const ProfilePage = () => {
             )}
           </div>
           <div className="text-center">
-            <h2 className="text-2xl font-bold">{profileData.userNickname}</h2>
+            <div className="flex items-center justify-center">
+              {isEditingNickname ? (
+                <>
+                  <input
+                    type="text"
+                    value={newNickname}
+                    onChange={(e) => setNewNickname(e.target.value)}
+                    className="border p-2"
+                  />
+                  <button
+                    onClick={handleNicknameSave}
+                    className="ml-2 text-green-600"
+                  >
+                    Save
+                  </button>
+                </>
+              ) : (
+                <>
+                  <h2 className="text-2xl font-bold">{profileData.userNickname}</h2>
+                  {isOwner && (
+                    <button
+                      onClick={handleNicknameEdit}
+                      className="ml-2 text-blue-600"
+                      aria-label="Edit Nickname"
+                    >
+                      <FaPen />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
             <p className="text-gray-600">{profileData.email}</p>
+          </div>
+          <div className="mt-4">
+            <div className="flex items-center justify-center">
+              {isEditingBio ? (
+                <>
+                  <textarea
+                    value={newBio}
+                    onChange={(e) => setNewBio(e.target.value)}
+                    className="border p-2 w-full"
+                    rows={4}
+                  />
+                  <button
+                    onClick={handleBioSave}
+                    className="ml-2 text-green-600"
+                  >
+                    Save
+                  </button>
+                </>
+              ) : (
+                <>
+                  {profileData.bio ? (
+                    <p className="text-gray-800">{profileData.bio}</p>
+                  ) : (
+                    <p className="text-gray-500 italic">No bio available.</p>
+                  )}
+                  {isOwner && (
+                    <button
+                      onClick={handleBioEdit}
+                      className="ml-2 text-blue-600"
+                      aria-label="Edit Bio"
+                    >
+                      <FaPen />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
           </div>
         </div>
       ) : (
