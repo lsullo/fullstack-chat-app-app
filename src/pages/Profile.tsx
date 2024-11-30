@@ -34,11 +34,9 @@ const ProfilePage = () => {
       }
 
       try {
-
         const userIndexResponse = await client.models.UserIndex.get({ id: userIndexId });
         if (userIndexResponse.data) {
           setProfileData(userIndexResponse.data);
-
 
           const session = await fetchAuthSession();
           const currentUserId = session.tokens?.idToken?.payload.sub;
@@ -87,10 +85,6 @@ const ProfilePage = () => {
         userId: profileData.userId,
         email: profileData.email,
         photoId: uploadedItem.path,
-        role: profileData.role, 
-        userNickname: profileData.userNickname, 
-        bio: profileData.bio,
-        lockedbio: profileData.lockedbio, 
       });
 
       const updatedProfileResponse = await client.models.UserIndex.get({ id: profileData.id });
@@ -124,11 +118,9 @@ const ProfilePage = () => {
         userId: profileData.userId,
         email: profileData.email,
         userNickname: newNickname,
-        role: profileData.role, 
-        bio: profileData.bio, 
-        lockedbio: profileData.lockedbio,
       });
 
+          
       const groupUserResponse = await client.models.GroupUser.list({
         filter: { userId: { eq: profileData.userId } },
       });
@@ -168,9 +160,6 @@ const ProfilePage = () => {
         userId: profileData.userId,
         email: profileData.email,
         bio: newBio,
-        role: profileData.role, 
-        userNickname: profileData.userNickname, 
-        lockedbio: profileData.lockedbio, 
       });
 
       const updatedProfileResponse = await client.models.UserIndex.get({ id: profileData.id });
@@ -193,7 +182,7 @@ const ProfilePage = () => {
 
   const handleRoleSave = async () => {
     if (!profileData) return;
-  
+
     if (!newRole) {
       setErrorMessage('Please select a valid role.');
       setTimeout(() => {
@@ -201,20 +190,18 @@ const ProfilePage = () => {
       }, 3777);
       return;
     }
-  
+
     try {
       await client.models.UserIndex.update({
         id: profileData.id,
-        photoId: profileData.photoId,
+        userId: profileData.userId,
+        email: profileData.email,
         role: newRole,
-        userNickname: profileData.userNickname,
-        bio: profileData.bio,
-        lockedbio: profileData.lockedbio,
       });
-  
+
       const updatedProfileResponse = await client.models.UserIndex.get({ id: profileData.id });
       setProfileData(updatedProfileResponse.data);
-  
+
       setIsEditingRole(false);
     } catch (error) {
       console.error('Error updating role:', error);
@@ -239,9 +226,6 @@ const ProfilePage = () => {
         userId: profileData.userId,
         email: profileData.email,
         lockedbio: newLockedBio,
-        role: profileData.role, 
-        userNickname: profileData.userNickname, 
-        bio: profileData.bio, 
       });
 
       const updatedProfileResponse = await client.models.UserIndex.get({ id: profileData.id });
