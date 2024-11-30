@@ -662,6 +662,7 @@ const PrivateMessagePage = () => {
           const userIndexId = msg.owner ? userIdToIndexIdMap[msg.owner] || '' : '';
           const role = msg.owner ? userIdToRoleMap[msg.owner] || '' : ''; 
 
+
           return (
             <div
               key={msg.id}
@@ -672,9 +673,13 @@ const PrivateMessagePage = () => {
               )}
             >
               {msg.type === 'system' ? (
-                <div className="text-center w-full opacity-50 text-black-200">
+                <div className={`text-center w-full opacity-50 ${
+                  groupDetails?.chatstatus === 'Activated' ? 'text-gray-300' : 'text-gray-333'
+                }`}>
                   <p className="text-sm italic">{msg.content}</p>
-                  <time className="text-xs opacity-50 text-black-200">
+                  <time className={`text-sm italic text-center w-full opacity-50 ${
+                  groupDetails?.chatstatus === 'Activated' ? 'text-gray-300' : 'text-gray-333'
+                }`}>
                     {formatTime(msg.createdAt)}
                   </time>
                 </div>
