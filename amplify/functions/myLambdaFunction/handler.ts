@@ -22,21 +22,21 @@ export const handler: Handler = async (event) => {
 
     const userIndexParams = {
       TableName: userIndexTable,
-      IndexName: "userIndicesByUserId", 
+      IndexName: "userIndicesByUserId",
       KeyConditionExpression: "userId = :userId",
       ExpressionAttributeValues: {
         ":userId": userId,
       },
     };
-    
+
     const userResult = await dynamoDB.query(userIndexParams).promise();
-    
+
     console.log("UserIndex Query Result:", JSON.stringify(userResult, null, 2));
-    
+
     if (!userResult.Items || userResult.Items.length === 0) {
       throw new Error("User not found with the provided userId.");
     }
-    
+
     const userItem = userResult.Items[0];
     const recentGroupUrl = userItem.recentgroup;
 
@@ -63,37 +63,83 @@ export const handler: Handler = async (event) => {
 
     const updateGroupResult = await dynamoDB.update(updateGroupParams).promise();
 
-    console.log("Group chat status updated successfully:", JSON.stringify(updateGroupResult, null, 2));
+    console.log(
+      "Group chat status updated successfully:",
+      JSON.stringify(updateGroupResult, null, 2)
+    );
 
-    
+    const lawyerUserId = "4f4bbe96-d20b-4b3b-87b0-09925cf2be4f"; 
+
+    const IndexParams = {
+      TableName: userIndexTable,
+      IndexName: "userIndicesByUserId",
+      KeyConditionExpression: "userId = :userId",
+      ExpressionAttributeValues: {
+        ":userId": lawyerUserId,
+      },
+    };
+
+    const paramResult = await dynamoDB.query(IndexParams).promise();
+
+    if (!paramResult.Items || paramResult.Items.length === 0) {
+      throw new Error("Lawyer user not found with the provided userId.");
+    }
+
+    const paramItem = paramResult.Items[0];
+    const paramNickname = paramItem.userNickname || "Unknown Lawyer";
+
     const newMessageId = uuidv4();
+    const newMessageId2 = uuidv4();
 
     const newMessage = {
       id: newMessageId,
       groupId,
-      content: `ACP ACTIVATED ANTI_GAY ON`,
-      userNickname: "LTM",
+      content: `Attorney Client Privilege Activated`,
+      userNickname: "System",
       type: "system",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    console.log("New group message payload:", newMessage);
-
-    const groupMessageParams = {
-      TableName: groupMessageTable,
-      Item: newMessage,
+    const newMessage2 = {
+      id: newMessageId2,
+      groupId,
+      content: `Hello, my name is Luke the Man. I am an attorney with Sullo and Sullo. 
+      Remember to review our terms and conditions so that your chat can be fully protected.
+       If you have any questions for me, send me a direct message or reach me at (***-***-****).`,
+      userNickname: paramNickname,
+      owner: lawyerUserId, 
+      type: "text",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
-    await dynamoDB.put(groupMessageParams).promise();
+    const batchWriteParams = {
+      RequestItems: {
+        [groupMessageTable]: [
+          {
+            PutRequest: {
+              Item: newMessage,
+            },
+          },
+          {
+            PutRequest: {
+              Item: newMessage2,
+            },
+          },
+        ],
+      },
+    };
 
-    console.log("Group message added successfully:", newMessage);
+    await dynamoDB.batchWrite(batchWriteParams).promise();
+
+    console.log("Group messages added successfully:", [newMessage, newMessage2]);
 
     return {
       statusCode: 200,
       body: JSON.stringify({
-        message: "Group message inserted successfully",
-        newMessage,
+        message: "Group messages inserted successfully",
+        messages: [newMessage, newMessage2],
       }),
     };
   } catch (error) {

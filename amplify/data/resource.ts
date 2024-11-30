@@ -43,12 +43,13 @@ const schema = a.schema({
     UserIndex: a
         .model({
             userId: a.id().required(),
-            role: a.enum(['VIP','User']),
+            role: a.enum(['Owner','Lawyer','User', 'VIP']),
             userNickname: a.string(),
             email: a.string().required(),
             recentgroup: a.string(),
             photoId: a.string(),
             bio: a.string(),
+            lockedbio: a.string(),
         })
         .secondaryIndexes((index) => [index('userId')])
         .authorization((allow) => [allow.authenticated().to(['create', 'read', 'update'])]),

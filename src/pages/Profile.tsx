@@ -1,25 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Schema } from '../../amplify/data/resource';
 import { generateClient } from 'aws-amplify/api';
 import { uploadData } from 'aws-amplify/storage';
 import { StorageImage } from '@aws-amplify/ui-react-storage';
 import { fetchAuthSession } from 'aws-amplify/auth';
-import { FaPen } from 'react-icons/fa';
+import { FaPen, FaArrowLeft } from 'react-icons/fa';
 
 const client = generateClient<Schema>();
 
 const ProfilePage = () => {
   const { userIndexId } = useParams<{ userIndexId: string }>();
+  const navigate = useNavigate();
   const [profileData, setProfileData] = useState<Schema['UserIndex']['type'] | null>(null);
-  const [isOwner, setIsOwner] = useState(false);
+  const [currentUserRole, setCurrentUserRole] = useState<'Owner' | 'Lawyer' | 'User' | 'VIP' | null>(null);
+  const [isSelf, setIsSelf] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const fileInputRef = useRef<HTMLInputElement | null>(null);
-
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [newNickname, setNewNickname] = useState('');
   const [isEditingBio, setIsEditingBio] = useState(false);
   const [newBio, setNewBio] = useState('');
+  const [isEditingRole, setIsEditingRole] = useState(false);
+  const [newRole, setNewRole] = useState<'Owner' | 'Lawyer' | 'User' | 'VIP' | ''>('');
+  const [isEditingLockedBio, setIsEditingLockedBio] = useState(false);
+  const [newLockedBio, setNewLockedBio] = useState('');
 
   useEffect(() => {
     const fetchProfileData = async () => {
@@ -29,15 +34,25 @@ const ProfilePage = () => {
       }
 
       try {
+
         const userIndexResponse = await client.models.UserIndex.get({ id: userIndexId });
         if (userIndexResponse.data) {
           setProfileData(userIndexResponse.data);
 
+
           const session = await fetchAuthSession();
           const currentUserId = session.tokens?.idToken?.payload.sub;
 
-          if (currentUserId && userIndexResponse.data.userId === currentUserId) {
-            setIsOwner(true);
+          if (currentUserId) {
+            const currentUserIndexResponse = await client.models.UserIndex.list({
+              filter: { userId: { eq: currentUserId } },
+            });
+
+            if (currentUserIndexResponse.data.length > 0) {
+              const currentUserData = currentUserIndexResponse.data[0];
+              setCurrentUserRole(currentUserData.role || null);
+              setIsSelf(currentUserId === userIndexResponse.data.userId);
+            }
           }
         } else {
           setErrorMessage('Profile not found');
@@ -59,23 +74,27 @@ const ProfilePage = () => {
   };
 
   const handleUpload = async (file: File) => {
+    if (!profileData) return;
+
     try {
       const uploadedItem = await uploadData({
         data: file,
         path: `chat-pics/${file.name}`,
       }).result;
 
-      if (profileData) {
-        await client.models.UserIndex.update({
-          id: profileData.id,
-          userId: profileData.userId,  
-          email: profileData.email,    
-          photoId: uploadedItem.path,
-        });
+      await client.models.UserIndex.update({
+        id: profileData.id,
+        userId: profileData.userId,
+        email: profileData.email,
+        photoId: uploadedItem.path,
+        role: profileData.role, 
+        userNickname: profileData.userNickname, 
+        bio: profileData.bio,
+        lockedbio: profileData.lockedbio, 
+      });
 
-        const updatedProfileResponse = await client.models.UserIndex.get({ id: profileData.id });
-        setProfileData(updatedProfileResponse.data);
-      }
+      const updatedProfileResponse = await client.models.UserIndex.get({ id: profileData.id });
+      setProfileData(updatedProfileResponse.data);
     } catch (error) {
       console.error('Error uploading image:', error);
       setErrorMessage("Can't use that image");
@@ -100,12 +119,14 @@ const ProfilePage = () => {
     if (!profileData) return;
 
     try {
-
       await client.models.UserIndex.update({
         id: profileData.id,
-        userId: profileData.userId,  
-        email: profileData.email,    
+        userId: profileData.userId,
+        email: profileData.email,
         userNickname: newNickname,
+        role: profileData.role, 
+        bio: profileData.bio, 
+        lockedbio: profileData.lockedbio,
       });
 
       const groupUserResponse = await client.models.GroupUser.list({
@@ -144,9 +165,12 @@ const ProfilePage = () => {
     try {
       await client.models.UserIndex.update({
         id: profileData.id,
-        userId: profileData.userId,  
-        email: profileData.email,    
+        userId: profileData.userId,
+        email: profileData.email,
         bio: newBio,
+        role: profileData.role, 
+        userNickname: profileData.userNickname, 
+        lockedbio: profileData.lockedbio, 
       });
 
       const updatedProfileResponse = await client.models.UserIndex.get({ id: profileData.id });
@@ -162,8 +186,85 @@ const ProfilePage = () => {
     }
   };
 
+  const handleRoleEdit = () => {
+    setIsEditingRole(true);
+    setNewRole(profileData?.role || '');
+  };
+
+  const handleRoleSave = async () => {
+    if (!profileData) return;
+
+    try {
+      await client.models.UserIndex.update({
+        id: profileData.id,
+        userId: profileData.userId,
+        email: profileData.email,
+        role: newRole || null,
+        userNickname: profileData.userNickname, 
+        bio: profileData.bio, 
+        lockedbio: profileData.lockedbio, 
+      });
+
+      const updatedProfileResponse = await client.models.UserIndex.get({ id: profileData.id });
+      setProfileData(updatedProfileResponse.data);
+
+      setIsEditingRole(false);
+    } catch (error) {
+      console.error('Error updating role:', error);
+      setErrorMessage('Error updating role');
+      setTimeout(() => {
+        setErrorMessage('');
+      }, 3777);
+    }
+  };
+
+  const handleLockedBioEdit = () => {
+    setIsEditingLockedBio(true);
+    setNewLockedBio(profileData?.lockedbio || '');
+  };
+
+  const handleLockedBioSave = async () => {
+    if (!profileData) return;
+
+    try {
+      await client.models.UserIndex.update({
+        id: profileData.id,
+        userId: profileData.userId,
+        email: profileData.email,
+        lockedbio: newLockedBio,
+        role: profileData.role, 
+        userNickname: profileData.userNickname, 
+        bio: profileData.bio, 
+      });
+
+      const updatedProfileResponse = await client.models.UserIndex.get({ id: profileData.id });
+      setProfileData(updatedProfileResponse.data);
+
+      setIsEditingLockedBio(false);
+    } catch (error) {
+      console.error('Error updating locked bio:', error);
+      setErrorMessage('Error updating locked bio');
+      setTimeout(() => {
+        setErrorMessage('');
+      }, 3777);
+    }
+  };
+
+  const handleBack = () => {
+    navigate(-1);
+  };
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-white">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-white relative">
+      {/* Back Arrow Icon */}
+      <button
+        onClick={handleBack}
+        className="absolute top-4 left-4 p-2 text-black-600 hover:text-red-800"
+        aria-label="Go Back"
+      >
+        <FaArrowLeft size={24} />
+      </button>
+
       {errorMessage && (
         <div className="error text-red-600 mb-4">
           {errorMessage}
@@ -184,7 +285,7 @@ const ProfilePage = () => {
                 <img src="/monkey.png" alt="Profile" className="w-full h-full object-cover" />
               )}
             </div>
-            {isOwner && (
+            {(isSelf || currentUserRole === 'Owner') && (
               <button
                 className="absolute bottom-1 right-32 p-2 bg-gray-200 rounded-full hover:bg-gray-300"
                 onClick={openFileInput}
@@ -193,7 +294,7 @@ const ProfilePage = () => {
                 <FaPen />
               </button>
             )}
-            {isOwner && (
+            {(isSelf || currentUserRole === 'Owner') && (
               <input
                 type="file"
                 ref={fileInputRef}
@@ -213,17 +314,28 @@ const ProfilePage = () => {
                     onChange={(e) => setNewNickname(e.target.value)}
                     className="border p-2"
                   />
-                  <button
-                    onClick={handleNicknameSave}
-                    className="ml-2 text-green-600"
-                  >
-                    Save
-                  </button>
+                  <div className="flex items-center justify-center mt-2">
+                    <button
+                      onClick={handleNicknameSave}
+                      className="btn btn-secondary btn-sm ml-2"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditingNickname(false);
+                        setNewNickname(profileData?.userNickname || '');
+                      }}
+                      className="btn btn-secondary btn-sm ml-2"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </>
               ) : (
                 <>
                   <h2 className="text-2xl font-bold">{profileData.userNickname}</h2>
-                  {isOwner && (
+                  {(isSelf || currentUserRole === 'Owner') && (
                     <button
                       onClick={handleNicknameEdit}
                       className="ml-2 text-blue-600"
@@ -247,12 +359,23 @@ const ProfilePage = () => {
                     className="border p-2 w-full"
                     rows={4}
                   />
-                  <button
-                    onClick={handleBioSave}
-                    className="ml-2 text-green-600"
-                  >
-                    Save
-                  </button>
+                  <div className="flex items-center justify-center mt-2">
+                    <button
+                      onClick={handleBioSave}
+                      className="btn btn-secondary btn-sm ml-2"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditingBio(false);
+                        setNewBio(profileData?.bio || '');
+                      }}
+                      className="btn btn-secondary btn-sm ml-2"
+                    >
+                      Cancel
+                    </button>
+                  </div>
                 </>
               ) : (
                 <>
@@ -261,7 +384,7 @@ const ProfilePage = () => {
                   ) : (
                     <p className="text-gray-500 italic">No bio available.</p>
                   )}
-                  {isOwner && (
+                  {(isSelf || currentUserRole === 'Owner') && (
                     <button
                       onClick={handleBioEdit}
                       className="ml-2 text-blue-600"
@@ -273,6 +396,102 @@ const ProfilePage = () => {
                 </>
               )}
             </div>
+          </div>
+          {/* Locked Bio Section */}
+          <div className="mt-4">
+            <div className="flex items-center justify-center">
+              {isEditingLockedBio ? (
+                <>
+                  <textarea
+                    value={newLockedBio}
+                    onChange={(e) => setNewLockedBio(e.target.value)}
+                    className="border p-2 w-full"
+                    rows={4}
+                  />
+                  <div className="flex items-center justify-center mt-2">
+                    <button
+                      onClick={handleLockedBioSave}
+                      className="btn btn-secondary btn-sm ml-2"
+                    >
+                      Save
+                    </button>
+                    <button
+                      onClick={() => {
+                        setIsEditingLockedBio(false);
+                        setNewLockedBio(profileData?.lockedbio || '');
+                      }}
+                      className="btn btn-secondary btn-sm ml-2"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {profileData.lockedbio ? (
+                    <p className="text-gray-800 font-bold">{profileData.lockedbio}</p>
+                  ) : (
+                    <p className="text-gray-500 italic">No locked bio available.</p>
+                  )}
+                  {currentUserRole === 'Owner' && (
+                    <button
+                      onClick={handleLockedBioEdit}
+                      className="ml-2 text-blue-600"
+                      aria-label="Edit Locked Bio"
+                    >
+                      <FaPen />
+                    </button>
+                  )}
+                </>
+              )}
+            </div>
+          </div>
+          {/* Role Section */}
+          <div className="mt-4">
+            <div className="flex items-center justify-center">
+              <p className="text-gray-600">Role: {profileData.role}</p>
+              {currentUserRole === 'Owner' && (
+                <button
+                  onClick={handleRoleEdit}
+                  className="ml-2 text-blue-600"
+                  aria-label="Edit Role"
+                >
+                  <FaPen />
+                </button>
+              )}
+            </div>
+            {isEditingRole && (
+              <>
+                <select
+                  value={newRole}
+                  onChange={(e) => setNewRole(e.target.value as 'Owner' | 'Lawyer' | 'User' | 'VIP')}
+                  className="border p-2 w-full mt-2"
+                >
+                  <option value="">Select Role</option>
+                  <option value="Owner">Owner</option>
+                  <option value="Lawyer">Lawyer</option>
+                  <option value="User">User</option>
+                  <option value="VIP">VIP</option>
+                </select>
+                <div className="flex items-center justify-center mt-2">
+                  <button
+                    onClick={handleRoleSave}
+                    className="btn btn-secondary btn-sm ml-2"
+                  >
+                    Save
+                  </button>
+                  <button
+                    onClick={() => {
+                      setIsEditingRole(false);
+                      setNewRole(profileData.role || '');
+                    }}
+                    className="btn btn-secondary btn-sm ml-2"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       ) : (

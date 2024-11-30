@@ -6,7 +6,7 @@ import { useAuthenticator } from '@aws-amplify/ui-react';
 import { uploadData } from 'aws-amplify/storage';
 import { StorageImage } from '@aws-amplify/ui-react-storage';
 import { fetchAuthSession } from 'aws-amplify/auth';
-import { FaSignOutAlt, FaPlus, FaUserSecret } from 'react-icons/fa';
+import { FaSignOutAlt, FaPlus, FaUserSecret, FaBalanceScale } from 'react-icons/fa'; 
 import clsx from 'clsx';
 
 const client = generateClient<Schema>();
@@ -42,8 +42,9 @@ const PrivateMessagePage = () => {
   const [loading, setLoading] = useState(true);
   const [loadingfr, setLoadingfr] = useState(false);
   const [fetchedUsers, setFetchedUsers] = useState<
-    Array<{ userId: string; userNickname: string; userIndexId: string }>
+    Array<{ userId: string; userNickname: string; userIndexId: string; role: string }> 
   >([]);
+  const [userIdToRoleMap, setUserIdToRoleMap] = useState<{ [userId: string]: string }>({}); 
   const [loadingNicknames, setLoadingNicknames] = useState(true);
   const [groupNotFound, setGroupNotFound] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -296,12 +297,13 @@ const PrivateMessagePage = () => {
             userId: string;
             userNickname: string;
             userIndexId: string;
+            role: string; 
           }> = [];
           const userIdToIndexId: { [userId: string]: string } = {};
+          const userIdToRole: { [userId: string]: string } = {}; 
 
           for (const groupUser of groupUserResponse.data) {
             if (groupUser.userNickname) {
-
               const userIndexResponse = await client.models.UserIndex.list({
                 filter: { userId: { eq: groupUser.userId } },
               });
@@ -312,23 +314,28 @@ const PrivateMessagePage = () => {
                   userId: groupUser.userId,
                   userNickname: groupUser.userNickname,
                   userIndexId: userIndex.id,
+                  role: userIndex.role || '',
                 });
 
                 userIdToIndexId[groupUser.userId] = userIndex.id;
+                userIdToRole[groupUser.userId] = userIndex.role || '';
               } else {
                 usersList.push({
                   userId: groupUser.userId,
                   userNickname: groupUser.userNickname,
                   userIndexId: '',
+                  role: '',
                 });
 
                 userIdToIndexId[groupUser.userId] = '';
+                userIdToRole[groupUser.userId] = '';
               }
             }
           }
 
           setFetchedUsers(usersList);
           setUserIdToIndexIdMap(userIdToIndexId);
+          setUserIdToRoleMap(userIdToRole); 
 
           setLoading(false);
         } catch (error) {
@@ -527,7 +534,6 @@ const PrivateMessagePage = () => {
   };
 
   return (
-    
     <div
       className={`flex flex-col min-h-screen ${
         groupDetails?.chatstatus === 'Activated' ? 'bg-black' : 'bg-white'
@@ -565,12 +571,12 @@ const PrivateMessagePage = () => {
       </div>
 
       <div
-            className="flex-1 overflow-y-auto p-6 space-y-4"
-            style={{
-              maxHeight: '120vh',
-              overflowY: 'auto',
-            }}
-          >
+        className="flex-1 overflow-y-auto p-6 space-y-4"
+        style={{
+          maxHeight: '120vh',
+          overflowY: 'auto',
+        }}
+      >
         {isPopupOpen && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-65 z-50">
             <div className="bg-white p-6 rounded-md shadow-md">
@@ -654,9 +660,9 @@ const PrivateMessagePage = () => {
         {/* Chat messages */}
         {msgs.map((msg) => {
           const userIndexId = msg.owner ? userIdToIndexIdMap[msg.owner] || '' : '';
+          const role = msg.owner ? userIdToRoleMap[msg.owner] || '' : ''; 
 
           return (
-            
             <div
               key={msg.id}
               className={clsx(
@@ -674,7 +680,7 @@ const PrivateMessagePage = () => {
                 </div>
               ) : (
                 <>
-                  {msg.content && (
+                  {(msg.content || msg.picId) && (
                     <div
                       className={clsx(
                         'chat max-w-xl w-1/3',
@@ -689,6 +695,9 @@ const PrivateMessagePage = () => {
                               : 'text-black'
                           }
                         >
+                          {role === 'Lawyer' && (
+                            <FaBalanceScale className="inline-block text-yellow-500 mr-1" />
+                          )}
                           {userIndexId ? (
                             <Link to={`/profile/${userIndexId}`}>
                               {msg.userNickname}
@@ -702,61 +711,50 @@ const PrivateMessagePage = () => {
                           </time>
                         </span>
                       </div>
-                      <p
-                        className={clsx(
-                          'chat-bubble',
-                          msg.owner !== user.username
-                            ? 'chat-bubble-accent'
-                            : 'chat-bubble-info',
-                          groupDetails?.chatstatus === 'Activated'
-                            ? 'text-white'
-                            : 'text-black'
-                        )}
-                      >
-                        {msg.content}
-                      </p>
-                    </div>
-                  )}
-                  {msg.picId && (
-                    <div
-                      className={clsx(
-                        'chat max-w-xl w-1/3',
-                        msg.owner !== user.username ? 'chat-start' : 'chat-end'
-                      )}
-                    >
-                      <div className="chat-header">
-                        <span
-                          className={
+                      {msg.content && (
+                        <p
+                          className={clsx(
+                            'chat-bubble',
+                            role === 'Lawyer'
+                              ? ''
+                              : msg.owner !== user.username
+                              ? 'chat-bubble-accent'
+                              : 'chat-bubble-info',
                             groupDetails?.chatstatus === 'Activated'
                               ? 'text-white'
                               : 'text-black'
+                          )}
+                          style={
+                            role === 'Lawyer'
+                              ? { backgroundColor: '#FFFACD', color: 'black' }
+                              : {}
                           }
                         >
-                          {userIndexId ? (
-                            <Link to={`/profile/${userIndexId}`}>
-                              {msg.userNickname}
-                            </Link>
-                          ) : (
-                            msg.userNickname
+                          {msg.content}
+                        </p>
+                      )}
+                      {msg.picId && (
+                        <StorageImage
+                          path={msg.picId}
+                          alt=""
+                          className={clsx(
+                            'chat-bubble',
+                            role === 'Lawyer'
+                              ? ''
+                              : msg.owner !== user.username
+                              ? 'chat-bubble-accent'
+                              : 'chat-bubble-info',
+                            groupDetails?.chatstatus === 'Activated'
+                              ? 'text-white'
+                              : 'text-black'
                           )}
-                          <time className="text-xs opacity-50 text-black-200">
-                            {formatTime(msg.createdAt)}
-                          </time>
-                        </span>
-                      </div>
-                      <StorageImage
-                        path={msg.picId}
-                        alt=""
-                        className={clsx(
-                          'chat-bubble',
-                          msg.owner !== user.username
-                            ? 'chat-bubble-accent'
-                            : 'chat-bubble-info',
-                          groupDetails?.chatstatus === 'Activated'
-                            ? 'text-white'
-                            : 'text-black'
-                        )}
-                      />
+                          style={
+                            role === 'Lawyer'
+                              ? { backgroundColor: '#FFFACD', color: 'black' }
+                              : {}
+                          }
+                        />
+                      )}
                     </div>
                   )}
                 </>
