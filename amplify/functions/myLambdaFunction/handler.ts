@@ -1,20 +1,55 @@
 import { DynamoDB } from "aws-sdk";
-import { Handler } from "aws-lambda";
+import { Handler, APIGatewayProxyResult } from "aws-lambda";
 import { v4 as uuidv4 } from "uuid";
 
+// Initialize DynamoDB Document Client
 const dynamoDB = new DynamoDB.DocumentClient();
 
+// DynamoDB Table Names
 const userIndexTable = "UserIndex-zym4s5tojfekjijegwzlhfhur4-NONE";
 const groupMessageTable = "GroupMessage-zym4s5tojfekjijegwzlhfhur4-NONE";
 const groupTable = "Group-zym4s5tojfekjijegwzlhfhur4-NONE";
 const groupUserTable = "GroupUser-zym4s5tojfekjijegwzlhfhur4-NONE";
 
-const usertobeaddeduserid = '913b3560-e091-7009-9862-dff786bf32e4';
+// User ID to be added
+const userToBeAddedUserId = '913b3560-e091-7009-9862-dff786bf32e4';
 
-export const handler: Handler = async (event) => {
+// TypeScript Interfaces
+
+interface UserIndex {
+  userId: string;
+  role: 'Owner' | 'Lawyer' | 'User' | 'VIP';
+  userNickname?: string;
+  email: string;
+  recentgroup?: string;
+  photoId?: string;
+  bio?: string;
+  lockedbio?: string;
+}
+
+interface GroupUser {
+  id: string;
+  groupId: string;
+  userId: string;
+  role: 'admin' | 'member';
+  userNickname?: string;
+  email?: string;
+}
+
+interface GroupMessage {
+  id: string;
+  groupId: string;
+  content: string;
+  userNickname: string;
+  type: 'text' | 'image' | 'system';
+  picId?: string;
+}
+
+export const handler: Handler = async (event): Promise<APIGatewayProxyResult> => {
   try {
     console.log("Received event:", JSON.stringify(event, null, 2));
 
+    // Extracting userId from the event
     const userId = event.detail?.data?.object?.client_reference_id;
 
     if (!userId) {
@@ -23,9 +58,10 @@ export const handler: Handler = async (event) => {
 
     console.log("Querying UserIndex table with userId:", userId);
 
+    // Query UserIndex table for the initiating user
     const userIndexParams = {
       TableName: userIndexTable,
-      IndexName: "userIndicesByUserId",
+      IndexName: "userId", // Ensure this matches your actual index name
       KeyConditionExpression: "userId = :userId",
       ExpressionAttributeValues: {
         ":userId": userId,
@@ -40,10 +76,10 @@ export const handler: Handler = async (event) => {
       throw new Error("User not found with the provided userId.");
     }
 
-    const userItem = userResult.Items[0];
+    const userItem = userResult.Items[0] as UserIndex;
     const recentGroupUrl = userItem.recentgroup;
 
-    const groupIdMatch = recentGroupUrl.match(/groups\/([^/]+)/);
+    const groupIdMatch = recentGroupUrl?.match(/groups\/([^/]+)/);
 
     if (!groupIdMatch || groupIdMatch.length < 2) {
       throw new Error("Invalid recent group URL format.");
@@ -72,84 +108,16 @@ export const handler: Handler = async (event) => {
       JSON.stringify(updateGroupResult, null, 2)
     );
 
-    // Create a group user entry for usertobeaddeduserid
-    const groupUserId = uuidv4();
-
-    const groupUserItem = {
-      id: groupUserId,
-      groupId: groupId,
-      userId: usertobeaddeduserid,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const groupUserParams = {
-      TableName: groupUserTable,
-      Item: groupUserItem,
-    };
-
-    await dynamoDB.put(groupUserParams).promise();
-
-    console.log("GroupUser entry added successfully:", groupUserItem);
-
-    // Get userNickname for usertobeaddeduserid from UserIndex table
-    const addedUserIndexParams = {
-      TableName: userIndexTable,
-      IndexName: "userIndicesByUserId",
-      KeyConditionExpression: "userId = :userId",
-      ExpressionAttributeValues: {
-        ":userId": usertobeaddeduserid,
-      },
-    };
-
-    const addedUserResult = await dynamoDB.query(addedUserIndexParams).promise();
-
-    console.log(
-      "Added UserIndex Query Result:",
-      JSON.stringify(addedUserResult, null, 2)
-    );
-
-    if (!addedUserResult.Items || addedUserResult.Items.length === 0) {
-      throw new Error("User to be added not found with the provided userId.");
-    }
-
-    const addedUserItem = addedUserResult.Items[0];
-    const addedUserNickname = addedUserItem.userNickname || "User";
-
-    // Create a message from usertobeaddeduserid in the recent group
-    const newMessageId = uuidv4();
-
-    const userMessage = {
-      id: newMessageId,
-      groupId,
-      content: "Hello, I have been added to the group.",
-      userNickname: addedUserNickname,
-      userId: usertobeaddeduserid,
-      type: "user",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    const userMessageParams = {
-      TableName: groupMessageTable,
-      Item: userMessage,
-    };
-
-    await dynamoDB.put(userMessageParams).promise();
-
-    console.log("User message added successfully:", userMessage);
-
-    // Also, add the service message
+    // Add the service message first
     const serviceMessageId = uuidv4();
 
-    const serviceMessage = {
+    const serviceMessage: GroupMessage = {
       id: serviceMessageId,
-      groupId,
+      groupId: groupId,
       content: "Attorney Client Privilege Activated",
       userNickname: "LTM",
-      type: "system",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      type: "system", // Must be 'text', 'image', or 'system' per schema
+      // 'picId' is optional and omitted here
     };
 
     const serviceMessageParams = {
@@ -161,6 +129,73 @@ export const handler: Handler = async (event) => {
 
     console.log("Service message added successfully:", serviceMessage);
 
+    // Create a group user entry for userToBeAddedUserId
+    const groupUserId = uuidv4();
+
+    // Initialize GroupUser with required fields
+    const groupUserItem: GroupUser = {
+      id: groupUserId,
+      groupId: groupId,
+      userId: userToBeAddedUserId,
+      role: "member", // Assuming 'role' is required and set to 'member'
+      // 'userNickname' and 'email' will be added if available
+    };
+
+    // Fetch userNickname and email for the user to be added
+    const addedUserIndexParams = {
+      TableName: userIndexTable,
+      IndexName: "userId", // Ensure this matches your actual index name
+      KeyConditionExpression: "userId = :userId",
+      ExpressionAttributeValues: {
+        ":userId": userToBeAddedUserId,
+      },
+    };
+
+    const addedUserResult = await dynamoDB.query(addedUserIndexParams).promise();
+
+    console.log(
+      "Added UserIndex Query Result:",
+      JSON.stringify(addedUserResult, null, 2)
+    );
+
+    if (addedUserResult.Items && addedUserResult.Items.length > 0) {
+      const addedUserItem = addedUserResult.Items[0] as UserIndex;
+      groupUserItem.userNickname = addedUserItem.userNickname;
+      groupUserItem.email = addedUserItem.email;
+    } else {
+      console.warn("User to be added not found in UserIndex table.");
+    }
+
+    const groupUserParams = {
+      TableName: groupUserTable,
+      Item: groupUserItem,
+    };
+
+    await dynamoDB.put(groupUserParams).promise();
+
+    console.log("GroupUser entry added successfully:", groupUserItem);
+
+    // Create a message from userToBeAddedUserId in the recent group
+    const userMessageId = uuidv4();
+
+    const userMessage: GroupMessage = {
+      id: userMessageId,
+      groupId: groupId,
+      content: "Hello, I have been added to the group.",
+      userNickname: groupUserItem.userNickname || "User",
+      type: "text", // Must be 'text', 'image', or 'system'
+      // 'picId' is optional and omitted here
+    };
+
+    const userMessageParams = {
+      TableName: groupMessageTable,
+      Item: userMessage,
+    };
+
+    await dynamoDB.put(userMessageParams).promise();
+
+    console.log("User message added successfully:", userMessage);
+
     return {
       statusCode: 200,
       body: JSON.stringify({
@@ -170,11 +205,15 @@ export const handler: Handler = async (event) => {
         serviceMessage,
       }),
     };
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Error processing request:", error);
+
+    // Type assertion to extract message if possible
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: "Error processing request", error }),
+      body: JSON.stringify({ message: "Error processing request", error: errorMessage }),
     };
   }
 };
