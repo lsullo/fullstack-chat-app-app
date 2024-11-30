@@ -20,7 +20,7 @@ const GroupsPage = () => {
   const [userNickname, setUserNickname] = useState('');
   const [deleteGroupId, setDeleteGroupId] = useState<string | null>(null); 
   const [leaveGroupId, setLeaveGroupId] = useState<string | null>(null); 
-  const [isUserIndexChecked, setIsUserIndexChecked] = useState(false);
+  //const [isUserIndexChecked, setIsUserIndexChecked] = useState(false);
 
 
   const navigate = useNavigate();
@@ -43,20 +43,22 @@ const GroupsPage = () => {
   }, [user]);
 
   useEffect(() => {
+    let isMounted = true; // To prevent setting state after unmount
+    
     const checkAndCreateUserIndex = async () => {
       if (fetchedUserId && client.models.UserIndex) {
         try {
           const userIndexResponse = await client.models.UserIndex.list({
             filter: { userId: { eq: fetchedUserId } },
           });
-
-          if (userIndexResponse.data.length === 0) {
+  
+          if (isMounted && userIndexResponse.data.length === 0) {
             await client.models.UserIndex.create({
               userId: fetchedUserId,
               email: userEmail,
               role: 'User',
               userNickname,
-              photoId: "public/pfp.webp" 
+              photoId: "public/pfp.webp"
             });
           } 
         } catch (error) {
@@ -64,12 +66,16 @@ const GroupsPage = () => {
         }
       }
     };
-
+  
     if (fetchedUserId) {
-      setIsUserIndexChecked(true);
       checkAndCreateUserIndex();
     }
-  }, [fetchedUserId, client.models.UserIndex, userEmail,isUserIndexChecked]);
+  
+    return () => {
+      isMounted = false; // Clean up function to prevent state update after unmount
+    };
+  }, [fetchedUserId]);
+  
 
   useEffect(() => {
     const fetchUserGroups = async () => {
