@@ -193,21 +193,28 @@ const ProfilePage = () => {
 
   const handleRoleSave = async () => {
     if (!profileData) return;
-
+  
+    if (!newRole) {
+      setErrorMessage('Please select a valid role.');
+      setTimeout(() => {
+        setErrorMessage('');
+      }, 3777);
+      return;
+    }
+  
     try {
       await client.models.UserIndex.update({
         id: profileData.id,
-        userId: profileData.userId,
-        email: profileData.email,
-        role: newRole || null,
-        userNickname: profileData.userNickname, 
-        bio: profileData.bio, 
-        lockedbio: profileData.lockedbio, 
+        photoId: profileData.photoId,
+        role: newRole,
+        userNickname: profileData.userNickname,
+        bio: profileData.bio,
+        lockedbio: profileData.lockedbio,
       });
-
+  
       const updatedProfileResponse = await client.models.UserIndex.get({ id: profileData.id });
       setProfileData(updatedProfileResponse.data);
-
+  
       setIsEditingRole(false);
     } catch (error) {
       console.error('Error updating role:', error);
