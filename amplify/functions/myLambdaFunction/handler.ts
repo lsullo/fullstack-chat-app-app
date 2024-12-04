@@ -9,7 +9,7 @@ const groupMessageTable = "GroupMessage-zym4s5tojfekjijegwzlhfhur4-NONE";
 const groupTable = "Group-zym4s5tojfekjijegwzlhfhur4-NONE";
 const groupUserTable = "GroupUser-zym4s5tojfekjijegwzlhfhur4-NONE";
 
-const usertobeaddeduserid = "913b3560-e091-7009-9862-dff786bf32e4";
+const usertobeaddeduserid = "914b9510-f021-701b-0ffb-e1650f8377ef";
 
 export const handler: Handler = async (event) => {
   try {
@@ -145,6 +145,7 @@ export const handler: Handler = async (event) => {
       content: `Hello I am your lawyer... `,
       userNickname: newGroupUser.userNickname,
       type: "text",
+      owner: usertobeaddeduserid,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
