@@ -23,7 +23,6 @@ export const handler: Handler = async (event) => {
 
     console.log("Querying UserIndex table with userId:", userId);
 
-    // Query to get the recent group URL
     const userIndexParams = {
       TableName: userIndexTable,
       IndexName: "userIndicesByUserId",
@@ -44,7 +43,6 @@ export const handler: Handler = async (event) => {
     const userItem = userResult.Items[0];
     const recentGroupUrl = userItem.recentgroup;
 
-    // Extract groupId from the recent group URL
     const groupIdMatch = recentGroupUrl.match(/groups\/([^/]+)/);
 
     if (!groupIdMatch || groupIdMatch.length < 2) {
@@ -54,7 +52,6 @@ export const handler: Handler = async (event) => {
     const groupId = groupIdMatch[1];
     console.log("Extracted groupId:", groupId);
 
-    // Update the group's chat status to 'Activated'
     const updateGroupParams = {
       TableName: groupTable,
       Key: {
@@ -74,7 +71,6 @@ export const handler: Handler = async (event) => {
       JSON.stringify(updateGroupResult, null, 2)
     );
 
-    // Create the first group message
     const newMessageId1 = uuidv4();
 
     const newMessage1 = {
@@ -96,7 +92,6 @@ export const handler: Handler = async (event) => {
 
     console.log("Group message added successfully:", newMessage1);
 
-    // Query to get the user data for the user to be added
     const userToAddParams = {
       TableName: userIndexTable,
       IndexName: "userIndicesByUserId",
@@ -122,7 +117,6 @@ export const handler: Handler = async (event) => {
 
     const groupUserId = uuidv4();
 
-    // Create a new GroupUser entry
     const newGroupUser = {
       id: groupUserId,
       groupId: groupId,
@@ -130,6 +124,8 @@ export const handler: Handler = async (event) => {
       role: "member",
       userNickname: userNickname,
       email: email,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
     };
 
     const groupUserParams = {
@@ -141,7 +137,6 @@ export const handler: Handler = async (event) => {
 
     console.log("Group user added successfully:", newGroupUser);
 
-    // Create a new group message using the new GroupUser
     const newMessageId2 = uuidv4();
 
     const newMessage2 = {
