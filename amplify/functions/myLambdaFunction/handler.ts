@@ -99,8 +99,12 @@ export const handler: Handler = async (event) => {
       "Unknown User";
     const email = userToAddItem.email || "unknown@example.com";
 
+    // Generate a unique ID for the new GroupUser
+    const groupUserId = uuidv4();
+
     // Create a new GroupUser entry
     const newGroupUser = {
+      id: groupUserId, // Added 'id' attribute
       groupId: groupId,
       userId: usertobeaddeduserid,
       role: "admin", // or 'member' as required

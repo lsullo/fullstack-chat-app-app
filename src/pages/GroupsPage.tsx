@@ -20,8 +20,6 @@ const GroupsPage = () => {
   const [userNickname, setUserNickname] = useState('');
   const [deleteGroupId, setDeleteGroupId] = useState<string | null>(null); 
   const [leaveGroupId, setLeaveGroupId] = useState<string | null>(null); 
-  //const [isUserIndexChecked, setIsUserIndexChecked] = useState(false);
-
 
   const navigate = useNavigate();
   const client = generateClient<Schema>();
@@ -43,7 +41,7 @@ const GroupsPage = () => {
   }, [user]);
 
   useEffect(() => {
-    let isMounted = true; // To prevent setting state after unmount
+    let isMounted = true; 
     
     const checkAndCreateUserIndex = async () => {
       if (fetchedUserId && client.models.UserIndex) {
@@ -72,7 +70,7 @@ const GroupsPage = () => {
     }
   
     return () => {
-      isMounted = false; // Clean up function to prevent state update after unmount
+      isMounted = false; 
     };
   }, [fetchedUserId]);
   
@@ -196,8 +194,7 @@ useEffect(() => {
         chatstatus: 'Def',
       });
   
-      
-      console.log('Created Group Data:', createdGroup);
+    
   
       if (createdGroup) {
         const { data: updatedGroup } = await client.models.Group.update({
@@ -216,7 +213,7 @@ useEffect(() => {
           });
   
           if (groupUserResponse) {
-            console.log('Group User Created:', groupUserResponse);
+            
             setGroups([...groups, createdGroup] as Schema['Group']['type'][]);
           }
   
