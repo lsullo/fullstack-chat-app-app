@@ -121,7 +121,7 @@ export const handler: Handler = async (event) => {
       id: groupUserId,
       groupId: groupId,
       userId: usertobeaddeduserid,
-      role: "member",
+      role: "Lawyer",
       userNickname: userNickname,
       email: email,
       createdAt: new Date().toISOString(),
