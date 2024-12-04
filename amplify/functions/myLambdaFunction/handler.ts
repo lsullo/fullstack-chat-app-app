@@ -2,129 +2,156 @@ import { DynamoDB } from "aws-sdk";
 import { Handler } from "aws-lambda";
 import { v4 as uuidv4 } from "uuid";
 
-
 const dynamoDB = new DynamoDB.DocumentClient();
-
 
 const userIndexTable = "UserIndex-zym4s5tojfekjijegwzlhfhur4-NONE";
 const groupMessageTable = "GroupMessage-zym4s5tojfekjijegwzlhfhur4-NONE";
 const groupTable = "Group-zym4s5tojfekjijegwzlhfhur4-NONE";
 const groupUserTable = "GroupUser-zym4s5tojfekjijegwzlhfhur4-NONE";
 
-const usertobeaddeduserid = '913b3560-e091-7009-9862-dff786bf32e4'
+const usertobeaddeduserid = '913b3560-e091-7009-9862-dff786bf32e4';
 
 export const handler: Handler = async (event) => {
- try {
-   console.log("Received event:", JSON.stringify(event, null, 2));
+  try {
+    console.log("Received event:", JSON.stringify(event, null, 2));
 
+    // Extract userId from the event
+    const userId = event.detail?.data?.object?.client_reference_id;
 
-   const userId = event.detail?.data?.object?.client_reference_id;
+    if (!userId) {
+      throw new Error("client_reference_id not found in the event data.");
+    }
 
+    console.log("Querying UserIndex table with userId:", userId);
 
-   if (!userId) {
-     throw new Error("client_reference_id not found in the event data.");
-   }
+    // Query UserIndex table to get recent group URL
+    const userIndexParams = {
+      TableName: userIndexTable,
+      IndexName: "userIndicesByUserId",
+      KeyConditionExpression: "userId = :userId",
+      ExpressionAttributeValues: {
+        ":userId": userId,
+      },
+    };
 
+    const userResult = await dynamoDB.query(userIndexParams).promise();
 
-   console.log("Querying UserIndex table with userId:", userId);
+    console.log("UserIndex Query Result:", JSON.stringify(userResult, null, 2));
 
+    if (!userResult.Items || userResult.Items.length === 0) {
+      throw new Error("User not found with the provided userId.");
+    }
 
-   const userIndexParams = {
-     TableName: userIndexTable,
-     IndexName: "userIndicesByUserId",
-     KeyConditionExpression: "userId = :userId",
-     ExpressionAttributeValues: {
-       ":userId": userId,
-     },
-   };
-  
-   const userResult = await dynamoDB.query(userIndexParams).promise();
-  
-   console.log("UserIndex Query Result:", JSON.stringify(userResult, null, 2));
-  
-   if (!userResult.Items || userResult.Items.length === 0) {
-     throw new Error("User not found with the provided userId.");
-   }
-  
-   const userItem = userResult.Items[0];
-   const recentGroupUrl = userItem.recentgroup;
+    const userItem = userResult.Items[0];
+    const recentGroupUrl = userItem.recentgroup;
 
+    // Extract groupId from recent group URL
+    const groupIdMatch = recentGroupUrl.match(/groups\/([^/]+)/);
 
-   const groupIdMatch = recentGroupUrl.match(/groups\/([^/]+)/);
+    if (!groupIdMatch || groupIdMatch.length < 2) {
+      throw new Error("Invalid recent group URL format.");
+    }
 
+    const groupId = groupIdMatch[1];
+    console.log("Extracted groupId:", groupId);
 
-   if (!groupIdMatch || groupIdMatch.length < 2) {
-     throw new Error("Invalid recent group URL format.");
-   }
+    // Update the group's chat status to 'Activated'
+    const updateGroupParams = {
+      TableName: groupTable,
+      Key: {
+        id: groupId,
+      },
+      UpdateExpression: "SET chatstatus = :activated",
+      ExpressionAttributeValues: {
+        ":activated": "Activated",
+      },
+      ReturnValues: "UPDATED_NEW",
+    };
 
+    const updateGroupResult = await dynamoDB.update(updateGroupParams).promise();
 
-   const groupId = groupIdMatch[1];
-   console.log("Extracted groupId:", groupId);
+    console.log(
+      "Group chat status updated successfully:",
+      JSON.stringify(updateGroupResult, null, 2)
+    );
 
+    // Query UserIndex table to get user data for the user to be added
+    const userToAddParams = {
+      TableName: userIndexTable,
+      IndexName: "userIndicesByUserId",
+      KeyConditionExpression: "userId = :userId",
+      ExpressionAttributeValues: {
+        ":userId": usertobeaddeduserid,
+      },
+    };
 
-   const updateGroupParams = {
-     TableName: groupTable,
-     Key: {
-       id: groupId,
-     },
-     UpdateExpression: "SET chatstatus = :activated",
-     ExpressionAttributeValues: {
-       ":activated": "Activated",
-     },
-     ReturnValues: "UPDATED_NEW",
-   };
+    const userToAddResult = await dynamoDB.query(userToAddParams).promise();
 
+    if (!userToAddResult.Items || userToAddResult.Items.length === 0) {
+      throw new Error("User to be added not found with the provided userId.");
+    }
 
-   const updateGroupResult = await dynamoDB.update(updateGroupParams).promise();
+    const userToAddItem = userToAddResult.Items[0];
 
+    const userNickname =
+      userToAddItem.userNickname ||
+      userToAddItem.nickname ||
+      "Unknown User";
+    const email = userToAddItem.email || "unknown@example.com";
 
-   console.log("Group chat status updated successfully:", JSON.stringify(updateGroupResult, null, 2));
+    // Create a new GroupUser entry
+    const newGroupUser = {
+      groupId: groupId,
+      userId: usertobeaddeduserid,
+      role: "admin", // or 'member' as required
+      userNickname: userNickname,
+      email: email,
+    };
 
+    const groupUserParams = {
+      TableName: groupUserTable,
+      Item: newGroupUser,
+    };
 
-  
-   const newMessageId = uuidv4();
+    await dynamoDB.put(groupUserParams).promise();
 
+    console.log("Group user added successfully:", newGroupUser);
 
-   const newMessage = {
-     id: newMessageId,
-     groupId,
-     content: `Attorney Client Privledge Activated`,
-     userNickname: "LTM",
-     type: "system",
-     createdAt: new Date().toISOString(),
-     updatedAt: new Date().toISOString(),
-   };
+    // Create a new group message using the new GroupUser
+    const newMessageId = uuidv4();
 
+    const newMessage = {
+      id: newMessageId,
+      groupId,
+      content: `Attorney Client Privilege Activated`,
+      userNickname: newGroupUser.userNickname,
+      type: "system",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
 
-   const groupMessageParams = {
-     TableName: groupMessageTable,
-     Item: newMessage,
-   };
+    const groupMessageParams = {
+      TableName: groupMessageTable,
+      Item: newMessage,
+    };
 
+    await dynamoDB.put(groupMessageParams).promise();
 
-   await dynamoDB.put(groupMessageParams).promise();
+    console.log("Group message added successfully:", newMessage);
 
-
-   console.log("Group message added successfully:", newMessage);
-
-
-   return {
-     statusCode: 200,
-     body: JSON.stringify({
-       message: "Group message inserted successfully",
-       newMessage,
-     }),
-   };
- } catch (error) {
-   console.error("Error processing request:", error);
-   return {
-     statusCode: 500,
-     body: JSON.stringify({ message: "Error processing request", error }),
-   };
- }
-
-
-
- 
+    return {
+      statusCode: 200,
+      body: JSON.stringify({
+        message: "Group user and message inserted successfully",
+        newGroupUser,
+        newMessage,
+      }),
+    };
+  } catch (error) {
+    console.error("Error processing request:", error);
+    return {
+      statusCode: 500,
+      body: JSON.stringify({ message: "Error processing request", error }),
+    };
+  }
 };
-
