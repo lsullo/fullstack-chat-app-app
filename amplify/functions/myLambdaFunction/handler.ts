@@ -9,13 +9,12 @@ const groupMessageTable = "GroupMessage-zym4s5tojfekjijegwzlhfhur4-NONE";
 const groupTable = "Group-zym4s5tojfekjijegwzlhfhur4-NONE";
 const groupUserTable = "GroupUser-zym4s5tojfekjijegwzlhfhur4-NONE";
 
-const usertobeaddeduserid = '913b3560-e091-7009-9862-dff786bf32e4';
+const usertobeaddeduserid = "913b3560-e091-7009-9862-dff786bf32e4";
 
 export const handler: Handler = async (event) => {
   try {
     console.log("Received event:", JSON.stringify(event, null, 2));
 
-    // Extract userId from the event
     const userId = event.detail?.data?.object?.client_reference_id;
 
     if (!userId) {
@@ -24,7 +23,7 @@ export const handler: Handler = async (event) => {
 
     console.log("Querying UserIndex table with userId:", userId);
 
-    // Query UserIndex table to get recent group URL
+    // Query to get the recent group URL
     const userIndexParams = {
       TableName: userIndexTable,
       IndexName: "userIndicesByUserId",
@@ -45,7 +44,7 @@ export const handler: Handler = async (event) => {
     const userItem = userResult.Items[0];
     const recentGroupUrl = userItem.recentgroup;
 
-    // Extract groupId from recent group URL
+    // Extract groupId from the recent group URL
     const groupIdMatch = recentGroupUrl.match(/groups\/([^/]+)/);
 
     if (!groupIdMatch || groupIdMatch.length < 2) {
@@ -75,7 +74,29 @@ export const handler: Handler = async (event) => {
       JSON.stringify(updateGroupResult, null, 2)
     );
 
-    // Query UserIndex table to get user data for the user to be added
+    // Create the first group message
+    const newMessageId1 = uuidv4();
+
+    const newMessage1 = {
+      id: newMessageId1,
+      groupId,
+      content: `Attorney Client Privilege Activated`,
+      userNickname: "LTM",
+      type: "system",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+
+    const groupMessageParams1 = {
+      TableName: groupMessageTable,
+      Item: newMessage1,
+    };
+
+    await dynamoDB.put(groupMessageParams1).promise();
+
+    console.log("Group message added successfully:", newMessage1);
+
+    // Query to get the user data for the user to be added
     const userToAddParams = {
       TableName: userIndexTable,
       IndexName: "userIndicesByUserId",
@@ -99,15 +120,14 @@ export const handler: Handler = async (event) => {
       "Unknown User";
     const email = userToAddItem.email || "unknown@example.com";
 
-    // Generate a unique ID for the new GroupUser
     const groupUserId = uuidv4();
 
     // Create a new GroupUser entry
     const newGroupUser = {
-      id: groupUserId, // Added 'id' attribute
+      id: groupUserId,
       groupId: groupId,
       userId: usertobeaddeduserid,
-      role: "admin", // or 'member' as required
+      role: "member",
       userNickname: userNickname,
       email: email,
     };
@@ -122,33 +142,34 @@ export const handler: Handler = async (event) => {
     console.log("Group user added successfully:", newGroupUser);
 
     // Create a new group message using the new GroupUser
-    const newMessageId = uuidv4();
+    const newMessageId2 = uuidv4();
 
-    const newMessage = {
-      id: newMessageId,
+    const newMessage2 = {
+      id: newMessageId2,
       groupId,
-      content: `Attorney Client Privilege Activated`,
+      content: `Hello I am your lawyer... `,
       userNickname: newGroupUser.userNickname,
-      type: "system",
+      type: "text",
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    const groupMessageParams = {
+    const groupMessageParams2 = {
       TableName: groupMessageTable,
-      Item: newMessage,
+      Item: newMessage2,
     };
 
-    await dynamoDB.put(groupMessageParams).promise();
+    await dynamoDB.put(groupMessageParams2).promise();
 
-    console.log("Group message added successfully:", newMessage);
+    console.log("Group message 2 added successfully:", newMessage2);
 
     return {
       statusCode: 200,
       body: JSON.stringify({
-        message: "Group user and message inserted successfully",
+        message: "Group user and messages inserted successfully",
         newGroupUser,
-        newMessage,
+        newMessage1,
+        newMessage2,
       }),
     };
   } catch (error) {
