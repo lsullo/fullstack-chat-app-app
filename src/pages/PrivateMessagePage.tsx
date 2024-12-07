@@ -81,14 +81,15 @@ const PrivateMessagePage = () => {
             userId
           )}`;
 
-          window.location.href = stripeUrl2;
+         window.location.href = stripeUrl2;
         }
       }
     } catch (error) {
       console.error('Error updating UserIndex or redirecting to Stripe:', error);
-      setLoadingfr(false);
+     setLoadingfr(false);
     }
   };
+ 
 
   const openPopup = () => setIsPopupOpen(true);
   const closePopup = () => setIsPopupOpen(false);

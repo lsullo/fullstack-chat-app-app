@@ -6,6 +6,7 @@ import HomePage from './pages/HomePage';
 import GroupsPage from './pages/GroupsPage';
 import PrivateMessagePage from './pages/PrivateMessagePage';
 import PaymentSuccess from './pages/PaymentSuccess';
+//import PaymentFailed from './pages/PaymentFailed';
 import ProfilePage from './pages/Profile';
 import GroupDetails from './pages/GroupDetails';
 
@@ -33,9 +34,13 @@ const router = createBrowserRouter([
             element: <GroupsPage />, 
           },
           {
-            path: '/paymentsuccess', 
+            path: 'paymentsuccess', 
             element: <PaymentSuccess />,
           },
+         // {
+           // path: 'paymentfailed', 
+           // element: <PaymentFailed />,
+         // },
           {
             path: 'groupdetails/:groupID', 
             element: <GroupDetails />,

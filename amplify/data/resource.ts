@@ -9,6 +9,7 @@ const schema = a.schema({
             adminId: a.id().required(),  
             members: a.hasMany('GroupUser', 'groupId'), 
             chatstatus: a.enum(['Def','Activated']), 
+            checkoutId: a.string(),
         })
         .secondaryIndexes((index) => [index('groupUrlName')])
         .authorization((allow) => [

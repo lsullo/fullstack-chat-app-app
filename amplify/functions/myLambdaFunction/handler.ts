@@ -16,9 +16,14 @@ export const handler: Handler = async (event) => {
     console.log("Received event:", JSON.stringify(event, null, 2));
 
     const userId = event.detail?.data?.object?.client_reference_id;
+    const checkoutId = event.detail?.data?.object?.id;
 
     if (!userId) {
       throw new Error("client_reference_id not found in the event data.");
+    }
+    
+    if (!checkoutId) {
+      throw new Error("checkoutId not found in the event data.");
     }
 
     console.log("Querying UserIndex table with userId:", userId);
@@ -57,8 +62,9 @@ export const handler: Handler = async (event) => {
       Key: {
         id: groupId,
       },
-      UpdateExpression: "SET chatstatus = :activated",
+      UpdateExpression: "SET checkoutId = :checkoutId, chatstatus = :activated",
       ExpressionAttributeValues: {
+        ":checkoutId": checkoutId,
         ":activated": "Activated",
       },
       ReturnValues: "UPDATED_NEW",
