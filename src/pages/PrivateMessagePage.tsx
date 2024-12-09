@@ -6,8 +6,10 @@ import { useAuthenticator } from '@aws-amplify/ui-react';
 import { uploadData } from 'aws-amplify/storage';
 import { StorageImage } from '@aws-amplify/ui-react-storage';
 import { fetchAuthSession } from 'aws-amplify/auth';
-import { FaSignOutAlt, FaPlus, FaUserSecret, FaBalanceScale } from 'react-icons/fa'; 
+import { FaSignOutAlt, FaPlus, FaUserSecret, FaBalanceScale, FaLock } from 'react-icons/fa'; 
 import { IoSettingsSharp } from "react-icons/io5";
+import { post } from 'aws-amplify/api';
+
 
 import clsx from 'clsx';
 
@@ -46,7 +48,7 @@ const PrivateMessagePage = () => {
   const [fetchedUsers, setFetchedUsers] = useState<
     Array<{ userId: string; userNickname: string; userIndexId: string; role: string }> 
   >([]);
-  const [userIdToRoleMap, setUserIdToRoleMap] = useState<{ [userId: string]: string }>({}); 
+  const [userIdToRoleMap, setUserIdToRoleMap] = useState<{ [userId: string]: string }>({});
   const [loadingNicknames, setLoadingNicknames] = useState(true);
   const [groupNotFound, setGroupNotFound] = useState(false);
   const [isPopupOpen, setIsPopupOpen] = useState(false);
@@ -83,42 +85,6 @@ const PrivateMessagePage = () => {
             userId
           )}`;
 
-         window.location.href = stripeUrl2;
-        }
-      }
-    } catch (error) {
-      console.error('Error updating UserIndex or redirecting to Stripe:', error);
-     setLoadingfr(false);
-    }
-  };
-  const handleManagementLinkClick = async () => {
-    const currentUrl = window.location.href;
-    const stripeUrl = `https://billing.stripe.com/p/login/test_dR65m24p8bh7c12cMM`;
-  
-    try {
-      setLoadingfr(true);
-      const { tokens } = await fetchAuthSession();
-  
-      const userId = tokens?.idToken?.payload.sub;
-      if (userId) {
-        const userIndexResponse = await client.models.UserIndex.list({
-          filter: { userId: { eq: userId } },
-        });
-  
-        if (userIndexResponse.data.length > 0) {
-          const userIndexEntry = userIndexResponse.data[0];
-  
-          await client.models.UserIndex.update({
-            id: userIndexEntry.id,
-            recentgroup: currentUrl,
-          });
-  
-          const userEmail = userIndexEntry.email;
-  
-          const stripeUrl2 = `${stripeUrl}?prefilled_email=${encodeURIComponent(
-            userEmail
-          )}`;
-  
           window.location.href = stripeUrl2;
         }
       }
@@ -127,8 +93,57 @@ const PrivateMessagePage = () => {
       setLoadingfr(false);
     }
   };
-  
- 
+
+  const handleManagementLinkClick = async () => {
+    const currentUrl = window.location.href;
+    const stripeUrl = `https://billing.stripe.com/p/login/test_dR65m24p8bh7c12cMM`;
+
+    try {
+      setLoadingfr(true);
+      const { tokens } = await fetchAuthSession();
+
+      const userId = tokens?.idToken?.payload.sub;
+      if (userId) {
+        const userIndexResponse = await client.models.UserIndex.list({
+          filter: { userId: { eq: userId } },
+        });
+
+        if (userIndexResponse.data.length > 0) {
+          const userIndexEntry = userIndexResponse.data[0];
+
+          await client.models.UserIndex.update({
+            id: userIndexEntry.id,
+            recentgroup: currentUrl,
+          });
+
+          const userEmail = userIndexEntry.email;
+
+          const stripeUrl2 = `${stripeUrl}?prefilled_email=${encodeURIComponent(
+            userEmail
+          )}`;
+
+          window.location.href = stripeUrl2;
+        }
+      }
+    } catch (error) {
+      console.error('Error updating UserIndex or redirecting to Stripe:', error);
+      setLoadingfr(false);
+    }
+  };
+
+  const handleVipLambdaClick = async () => {
+    try {
+      const apiName = 'myapi';
+      const path = '/amplify-ddn92qjed4i9g-mai-myLambdaFunctionlambdaAE-wnqemyvbnoT6';
+      const options = {
+        body: { userId: fetchedUserId },
+      };
+      const response = await post({ apiName, path, options });
+      console.log('Lambda response:', response);
+    } catch (error) {
+      console.error('Error calling lambda:', error);
+    }
+  };
 
   const openPopup = () => setIsPopupOpen(true);
   const closePopup = () => setIsPopupOpen(false);
@@ -560,6 +575,7 @@ const PrivateMessagePage = () => {
       </div>
     );
   }
+
   const renderChatName = () => {
     if (!groupDetails?.groupname || !groupDetails?.groupId) return null;
 
@@ -572,6 +588,8 @@ const PrivateMessagePage = () => {
       </Link>
     );
   };
+
+  const currentUserRole = fetchedUserId ? userIdToRoleMap[fetchedUserId] : '';
 
   return (
     <div
@@ -602,24 +620,23 @@ const PrivateMessagePage = () => {
             <FaSignOutAlt className="text-red-600 text-xl" onClick={openPopup2} />
           )}
           <FaPlus className="text-red-600 text-xl" onClick={openPopup} />
-          <a onClick={handlePaymentLinkClick} className="text-yellow-600 text-xl">
+          <a onClick={handlePaymentLinkClick } className="text-yellow-600 text-xl">
             {groupDetails?.adminId && groupDetails?.chatstatus !== 'Activated' && (
               <FaUserSecret />
             )}
           </a>
 
           <a onClick={handleManagementLinkClick} className="text-black-600 text-xl">
-          
-          <IoSettingsSharp />
-    
-      </a>
+            {groupDetails?.chatstatus === 'Activated' && (
+              <IoSettingsSharp />
+            )}
+          </a>
 
-       {/* activated code  "   <a onClick={handleManagementLinkClick} className="text-black-600 text-xl">
-          {groupDetails?.chatstatus === 'Activated' && (
-          <IoSettingsSharp />
-      )}
-      </a>     " */}
-
+          {currentUserRole === 'VIP' && (
+            <a onClick={handleVipLambdaClick} className="text-black-600 text-xl">
+              <FaLock />
+            </a>
+          )}
         </div>
       </div>
 
@@ -714,7 +731,6 @@ const PrivateMessagePage = () => {
         {msgs.map((msg) => {
           const userIndexId = msg.owner ? userIdToIndexIdMap[msg.owner] || '' : '';
           const role = msg.owner ? userIdToRoleMap[msg.owner] || '' : ''; 
-
 
           return (
             <div
