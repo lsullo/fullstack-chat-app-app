@@ -7,6 +7,8 @@ import { uploadData } from 'aws-amplify/storage';
 import { StorageImage } from '@aws-amplify/ui-react-storage';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { FaSignOutAlt, FaPlus, FaUserSecret, FaBalanceScale } from 'react-icons/fa'; 
+import { IoSettingsSharp } from "react-icons/io5";
+
 import clsx from 'clsx';
 
 const client = generateClient<Schema>();
@@ -89,6 +91,43 @@ const PrivateMessagePage = () => {
      setLoadingfr(false);
     }
   };
+  const handleManagementLinkClick = async () => {
+    const currentUrl = window.location.href;
+    const stripeUrl = `https://billing.stripe.com/p/login/test_dR65m24p8bh7c12cMM`;
+  
+    try {
+      setLoadingfr(true);
+      const { tokens } = await fetchAuthSession();
+  
+      const userId = tokens?.idToken?.payload.sub;
+      if (userId) {
+        const userIndexResponse = await client.models.UserIndex.list({
+          filter: { userId: { eq: userId } },
+        });
+  
+        if (userIndexResponse.data.length > 0) {
+          const userIndexEntry = userIndexResponse.data[0];
+  
+          await client.models.UserIndex.update({
+            id: userIndexEntry.id,
+            recentgroup: currentUrl,
+          });
+  
+          const userEmail = userIndexEntry.email;
+  
+          const stripeUrl2 = `${stripeUrl}?prefilled_email=${encodeURIComponent(
+            userEmail
+          )}`;
+  
+          window.location.href = stripeUrl2;
+        }
+      }
+    } catch (error) {
+      console.error('Error updating UserIndex or redirecting to Stripe:', error);
+      setLoadingfr(false);
+    }
+  };
+  
  
 
   const openPopup = () => setIsPopupOpen(true);
@@ -568,6 +607,19 @@ const PrivateMessagePage = () => {
               <FaUserSecret />
             )}
           </a>
+
+          <a onClick={handleManagementLinkClick} className="text-black-600 text-xl">
+          
+          <IoSettingsSharp />
+    
+      </a>
+
+       {/* activated code  "   <a onClick={handleManagementLinkClick} className="text-black-600 text-xl">
+          {groupDetails?.chatstatus === 'Activated' && (
+          <IoSettingsSharp />
+      )}
+      </a>     " */}
+
         </div>
       </div>
 
