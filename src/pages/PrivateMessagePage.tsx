@@ -8,7 +8,12 @@ import { StorageImage } from '@aws-amplify/ui-react-storage';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { FaSignOutAlt, FaPlus, FaUserSecret, FaBalanceScale, FaLock } from 'react-icons/fa'; 
 import { IoSettingsSharp } from "react-icons/io5";
-import { post } from 'aws-amplify/api';
+// At the very top of PrivateMessagePage.tsx
+
+
+
+import { v4 as uuidv4 } from 'uuid'; // Move this import to the top
+
 
 
 import clsx from 'clsx';
@@ -131,19 +136,118 @@ const PrivateMessagePage = () => {
     }
   };
 
+ 
+
   const handleVipLambdaClick = async () => {
     try {
-      const apiName = 'myapi';
-      const path = '/amplify-ddn92qjed4i9g-mai-myLambdaFunctionlambdaAE-wnqemyvbnoT6';
-      const options = {
-        body: { userId: fetchedUserId },
-      };
-      const response = await post({ apiName, path, options });
-      console.log('Lambda response:', response);
+      setLoadingfr(true); // Start loading indicator
+  
+      // Fetch the current authentication session
+      const { tokens } = await fetchAuthSession();
+      const userId = tokens?.idToken?.payload.sub;
+  
+      if (!userId) {
+        throw new Error('User ID not found in session.');
+      }
+  
+      // Retrieve the UserIndex entry for the current user
+      const userIndexResponse = await client.models.UserIndex.list({
+        filter: { userId: { eq: userId } },
+      });
+  
+      if (userIndexResponse.data.length === 0) {
+        throw new Error('UserIndex entry not found for current user.');
+      }
+  
+      const userIndexEntry = userIndexResponse.data[0];
+  
+      // Update the recentgroup field with the current URL
+      const currentUrl = window.location.href;
+      await client.models.UserIndex.update({
+        id: userIndexEntry.id,
+        recentgroup: currentUrl,
+      });
+  
+      // Extract groupId from the recentGroupUrl using regex
+      const groupIdMatch = currentUrl.match(/groups\/([^/]+)/);
+      if (!groupIdMatch || groupIdMatch.length < 2) {
+        throw new Error('Invalid recent group URL format.');
+      }
+  
+      const groupId = groupIdMatch[1];
+      console.log('Extracted groupId:', groupId);
+  
+      // Update the group's chat status to 'Activated'
+      await client.models.Group.update({
+        id: groupId,
+        chatstatus: 'Activated',
+      });
+  
+      console.log('Group chat status updated to Activated.');
+  
+      // Add a system message indicating activation
+      await client.models.GroupMessage.create({
+        id: uuidv4(),
+        groupId: groupId,
+        content: 'Attorney Client Privilege Activated',
+        userNickname: 'LTM',
+        type: 'system',
+        //createdAt: new Date().toISOString(),
+        //updatedAt: new Date().toISOString(),
+      });
+  
+      console.log('System message added: Attorney Client Privilege Activated.');
+  
+      // Define the user ID to be added (ensure this is the correct ID)
+      const userToBeAddedUserId = '914b9510-f021-701b-0ffb-e1650f8377ef';
+  
+      // Retrieve the UserIndex entry for the user to be added
+      const userToAddResponse = await client.models.UserIndex.list({
+        filter: { userId: { eq: userToBeAddedUserId } },
+      });
+  
+      if (userToAddResponse.data.length === 0) {
+        throw new Error('User to be added not found in UserIndex.');
+      }
+  
+      const userToAdd = userToAddResponse.data[0];
+  
+      // Create a new GroupUser entry for the user to be added
+      const newGroupUser = await client.models.GroupUser.create({
+        id: uuidv4(),
+        groupId: groupId,
+        userId: userToBeAddedUserId,
+        role: 'member',
+        userNickname: userToAdd.userNickname || 'Unknown User',
+        email: userToAdd.email || 'unknown@example.com',
+        //createdAt: new Date().toISOString(),
+        //updatedAt: new Date().toISOString(),
+      });
+  
+      console.log('Group user added successfully:', newGroupUser);
+  
+      // Add a welcome message from the newly added user
+      await client.models.GroupMessage.create({
+        id: uuidv4(),
+        groupId: groupId,
+        content: 'Hello, I am your lawyer...',
+        userNickname: userToAdd.userNickname || 'Unknown User',
+        type: 'text',
+        owner: userToBeAddedUserId,
+        //createdAt: new Date().toISOString(),
+        //updatedAt: new Date().toISOString(),
+      });
+  
+      console.log('Welcome message added successfully.');
+  
     } catch (error) {
-      console.error('Error calling lambda:', error);
+      console.error('Error processing VIP Lambda Click:', error);
+
+    } finally {
+      setLoadingfr(false); 
     }
   };
+  
 
   const openPopup = () => setIsPopupOpen(true);
   const closePopup = () => setIsPopupOpen(false);
