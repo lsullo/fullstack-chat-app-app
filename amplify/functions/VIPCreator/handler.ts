@@ -1,23 +1,17 @@
 import { DynamoDB } from "aws-sdk";
-import { APIGatewayProxyHandler } from "aws-lambda";
+import { Handler } from "aws-lambda";
 
 const dynamoDB = new DynamoDB.DocumentClient();
+const userIndexTable = "UserIndex-zym4s5tojfekjijegwzlhfhur4-NONE";
 
-const userIndexTable = "UserIndex-zym4s5tojfekjijegwzlhfhur4-NONE"; // Replace with your actual table name
-
-export const handler: APIGatewayProxyHandler = async (event) => {
+export const handler: Handler = async (event) => {
   try {
     console.log("Received event:", JSON.stringify(event, null, 2));
 
-    // Parse the request body
-    const body = event.body ? JSON.parse(event.body) : {};
-    const userId: string = body.userId;
-
+    // Extract the userId from the event detail
+    const userId = event.detail?.data?.object?.client_reference_id;
     if (!userId) {
-      return {
-        statusCode: 400,
-        body: JSON.stringify({ message: "Missing 'userId' in request body." }),
-      };
+      throw new Error("client_reference_id not found in the event data.");
     }
 
     console.log("Updating user role to VIP for userId:", userId);
@@ -30,7 +24,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       },
       UpdateExpression: "SET #role = :vip",
       ExpressionAttributeNames: {
-        "#role": "role", // Assuming 'role' is the attribute name
+        "#role": "role",
       },
       ExpressionAttributeValues: {
         ":vip": "VIP",
@@ -38,13 +32,8 @@ export const handler: APIGatewayProxyHandler = async (event) => {
       ReturnValues: "UPDATED_NEW",
     };
 
-
     const updateResult = await dynamoDB.update(updateParams).promise();
-
-    console.log(
-      "User role updated successfully:",
-      JSON.stringify(updateResult, null, 2)
-    );
+    console.log("User role updated successfully:", JSON.stringify(updateResult, null, 2));
 
     return {
       statusCode: 200,
@@ -58,7 +47,7 @@ export const handler: APIGatewayProxyHandler = async (event) => {
     return {
       statusCode: 500,
       body: JSON.stringify({
-        message: "Internal Server Error",
+        message: "Error updating user role",
         error: error instanceof Error ? error.message : "Unknown error",
       }),
     };
