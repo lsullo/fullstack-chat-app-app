@@ -38,6 +38,7 @@ const schema = a.schema({
             userNickname: a.string(),
             email: a.string(),
         })
+        .secondaryIndexes((index) => [index('userId')])
         .authorization((allow) => [allow.authenticated().to(['create', 'read', 'delete'])]),
 
     UserIndex: a

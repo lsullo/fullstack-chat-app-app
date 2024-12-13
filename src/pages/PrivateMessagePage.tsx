@@ -203,7 +203,6 @@ const PrivateMessagePage = () => {
         content: 'Hello, I am your lawyer...',
         userNickname: userToAdd.userNickname || 'Unknown User',
         type: 'text',
-        owner: userToBeAddedUserId,
       });
   
       console.log('Welcome message added successfully.');
@@ -213,6 +212,7 @@ const PrivateMessagePage = () => {
 
     } finally {
       setLoadingfr(false); 
+      window.location.reload();
     }
   };
 
