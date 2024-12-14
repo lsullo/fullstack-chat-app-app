@@ -440,11 +440,11 @@ const PrivateMessagePage = () => {
                   userId: groupUser.userId,
                   userNickname: groupUser.userNickname,
                   userIndexId: userIndex.id,
-                  role: userIndex.role || '',
+                  role: userIndex.RedPill || '',
                 });
 
                 userIdToIndexId[groupUser.userId] = userIndex.id;
-                userIdToRole[groupUser.userId] = userIndex.role || '';
+                userIdToRole[groupUser.userId] = userIndex.RedPill || '';
               } else {
                 usersList.push({
                   userId: groupUser.userId,

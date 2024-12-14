@@ -54,7 +54,7 @@ const GroupsPage = () => {
             await client.models.UserIndex.create({
               userId: fetchedUserId,
               email: userEmail,
-              role: 'User',
+              RedPill: 'User',
               userNickname,
               photoId: "public/pfp.webp"
             });
@@ -186,12 +186,26 @@ useEffect(() => {
     const updatedMemberEmails = [...memberEmails, emailInput.trim()];
   
     const groupUrlName = groupName.toLowerCase().replace(/\s/g, '-');
+
+    const userIndexResponse = await client.models.UserIndex.list({
+      filter: { userId: { eq: fetchedUserId } },
+    });
+    
+    if (userIndexResponse.data.length === 0) {
+      console.error('No UserIndex found for this user.');
+      return;
+    }
+    
+    const userRecord = userIndexResponse.data[0];
+    const userIndexId = userRecord.id; 
+    
     try {
       const { data: createdGroup } = await client.models.Group.create({
         groupname: groupName,
         groupUrlName,
         adminId: fetchedUserId,
         chatstatus: 'Def',
+        UserIndexId: userIndexId,
       });
   
     

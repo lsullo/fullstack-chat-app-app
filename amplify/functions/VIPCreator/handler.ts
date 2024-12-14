@@ -8,38 +8,45 @@ export const handler: Handler = async (event) => {
   try {
     console.log("Received event:", JSON.stringify(event, null, 2));
 
-    // Extract the userId from the event detail
     const userId = event.detail?.data?.object?.client_reference_id;
     if (!userId) {
       throw new Error("client_reference_id not found in the event data.");
     }
 
-    console.log("Updating user role to VIP for userId:", userId);
+    console.log("Querying UserIndex table with userId:", userId);
 
-    // Update the user's role to VIP
-    const updateParams: DynamoDB.DocumentClient.UpdateItemInput = {
+    const userIndexParams = {
       TableName: userIndexTable,
-      Key: {
-        userId: userId,
+      IndexName: "userIndicesByUserId",
+      KeyConditionExpression: "userId = :userId",
+      ExpressionAttributeValues: {
+        ":userId": userId,
       },
-      UpdateExpression: "SET #role = :vip",
-      ExpressionAttributeNames: {
-        "#role": "role",
-      },
+    };
+
+    const userResult = await dynamoDB.query(userIndexParams).promise();
+    console.log("UserIndex Query Result:", JSON.stringify(userResult, null, 2));
+
+    if (!userResult.Items || userResult.Items.length === 0) {
+      throw new Error("User not found with the provided userId.");
+    }
+    const updateUserParams = {
+      TableName: userIndexTable,
+      Key: { id: userId },
+      UpdateExpression: "SET RedPill = :vip",
       ExpressionAttributeValues: {
         ":vip": "VIP",
       },
       ReturnValues: "UPDATED_NEW",
     };
 
-    const updateResult = await dynamoDB.update(updateParams).promise();
-    console.log("User role updated successfully:", JSON.stringify(updateResult, null, 2));
-
+    const updateUserResult = await dynamoDB.update(updateUserParams).promise();
+    console.log("Group chat status updated successfully:", JSON.stringify(updateUserResult, null, 2));
     return {
       statusCode: 200,
       body: JSON.stringify({
         message: `User ${userId} role updated to VIP successfully.`,
-        updatedAttributes: updateResult.Attributes,
+        updatedAttributes: updateUserResult.Attributes,
       }),
     };
   } catch (error) {
