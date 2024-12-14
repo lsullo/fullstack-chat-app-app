@@ -193,6 +193,7 @@ const PrivateMessagePage = () => {
         role: 'member',
         userNickname: userToAdd.userNickname || 'Unknown User',
         email: userToAdd.email || 'unknown@example.com',
+        
       });
   
       console.log('Group user added successfully:', newGroupUser);
@@ -203,6 +204,7 @@ const PrivateMessagePage = () => {
         content: 'Hello, I am your lawyer...',
         userNickname: userToAdd.userNickname || 'Unknown User',
         type: 'text',
+        owner: userToBeAddedUserId
       });
   
       console.log('Welcome message added successfully.');
