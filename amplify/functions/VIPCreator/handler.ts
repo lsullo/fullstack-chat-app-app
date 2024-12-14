@@ -17,11 +17,12 @@ export const handler: Handler = async (event) => {
 
     const userIndexParams = {
       TableName: userIndexTable,
-      IndexName: "userIndicesByUserId",
+      IndexName: "userIndicesByUserId", // Secondary index on userId
       KeyConditionExpression: "userId = :userId",
       ExpressionAttributeValues: {
         ":userId": userId,
       },
+      Limit: 1,
     };
 
     const userResult = await dynamoDB.query(userIndexParams).promise();
@@ -30,9 +31,14 @@ export const handler: Handler = async (event) => {
     if (!userResult.Items || userResult.Items.length === 0) {
       throw new Error("User not found with the provided userId.");
     }
+
+    // Extract the actual primary key (id) of the UserIndex item
+    const userItem = userResult.Items[0];
+    const actualId = userItem.id; // Use this 'id' field to update
+
     const updateUserParams = {
       TableName: userIndexTable,
-      Key: { id: userId },
+      Key: { id: actualId }, // Update by the primary key 'id', not userId
       UpdateExpression: "SET RedPill = :vip",
       ExpressionAttributeValues: {
         ":vip": "VIP",
@@ -41,7 +47,8 @@ export const handler: Handler = async (event) => {
     };
 
     const updateUserResult = await dynamoDB.update(updateUserParams).promise();
-    console.log("Group chat status updated successfully:", JSON.stringify(updateUserResult, null, 2));
+    console.log("User role updated successfully:", JSON.stringify(updateUserResult, null, 2));
+
     return {
       statusCode: 200,
       body: JSON.stringify({
