@@ -48,7 +48,7 @@ const ProfilePage = () => {
 
             if (currentUserIndexResponse.data.length > 0) {
               const currentUserData = currentUserIndexResponse.data[0];
-              setCurrentUserRole(currentUserData.role || null);
+              setCurrentUserRole(currentUserData.RedPill || null);
               setIsSelf(currentUserId === userIndexResponse.data.userId);
             }
           }
@@ -177,7 +177,7 @@ const ProfilePage = () => {
 
   const handleRoleEdit = () => {
     setIsEditingRole(true);
-    setNewRole(profileData?.role || '');
+    setNewRole(profileData?.RedPill || '');
   };
 
   const handleRoleSave = async () => {
@@ -196,7 +196,7 @@ const ProfilePage = () => {
         id: profileData.id,
         userId: profileData.userId,
         email: profileData.email,
-        role: newRole,
+        RedPill: newRole,
       });
 
       const updatedProfileResponse = await client.models.UserIndex.get({ id: profileData.id });
@@ -440,7 +440,7 @@ const ProfilePage = () => {
           {/* Role Section */}
           <div className="mt-4">
             <div className="flex items-center justify-center">
-              <p className="text-gray-600">Role: {profileData.role}</p>
+              <p className="text-gray-600">Role: {profileData.RedPill}</p>
               {currentUserRole === 'Owner' && (
                 <button
                   onClick={handleRoleEdit}
@@ -474,7 +474,7 @@ const ProfilePage = () => {
                   <button
                     onClick={() => {
                       setIsEditingRole(false);
-                      setNewRole(profileData.role || '');
+                      setNewRole(profileData.RedPill || '');
                     }}
                     className="btn btn-secondary btn-sm ml-2"
                   >
