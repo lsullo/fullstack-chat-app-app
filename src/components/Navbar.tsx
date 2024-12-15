@@ -4,6 +4,8 @@ import { generateClient } from 'aws-amplify/api';
 import { FaUser } from 'react-icons/fa';
 import { Schema } from '../../amplify/data/resource';
 
+
+
 const client = generateClient<Schema>();
 
 interface NavbarProps {
@@ -57,7 +59,8 @@ const Navbar: React.FC<NavbarProps> = ({ user, signOut }) => {
                 </Link>
               </li>
               <li>
-                <button onClick={signOut}>Sign Out</button>
+              <button onClick={() => {signOut(); setUserNickname(''); }}>
+                Sign Out</button>
               </li>
             </>
           )}

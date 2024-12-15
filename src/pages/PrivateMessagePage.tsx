@@ -131,7 +131,7 @@ const PrivateMessagePage = () => {
 
   const handleVipLambdaClick = async () => {
     try {
-      setLoadingfr(true); 
+      setLoadingfr(true);
   
       const { tokens } = await fetchAuthSession();
       const userId = tokens?.idToken?.payload.sub;
@@ -140,16 +140,8 @@ const PrivateMessagePage = () => {
         throw new Error('User ID not found in session.');
       }
   
-      const userIndexResponse = await client.models.UserIndex.list({
-        filter: { userId: { eq: userId } },
-      });
-  
-      if (userIndexResponse.data.length === 0) {
-        throw new Error('UserIndex entry not found for current user.');
-      }
-
+      // Retrieve the groupId from the current URL
       const currentUrl = window.location.href;
-  
       const groupIdMatch = currentUrl.match(/groups\/([^/]+)/);
       if (!groupIdMatch || groupIdMatch.length < 2) {
         throw new Error('Invalid recent group URL format.');
@@ -158,6 +150,7 @@ const PrivateMessagePage = () => {
       const groupId = groupIdMatch[1];
       console.log('Extracted groupId:', groupId);
   
+      // Update the group chatstatus to 'Activated'
       await client.models.Group.update({
         id: groupId,
         chatstatus: 'Activated',
@@ -165,59 +158,67 @@ const PrivateMessagePage = () => {
   
       console.log('Group chat status updated to Activated.');
   
+      // Add the system message
       await client.models.GroupMessage.create({
         id: uuidv4(),
         groupId: groupId,
         content: 'Attorney Client Privilege Activated',
-        userNickname: 'LTM',
+        userNickname: 'System',
         type: 'system',
       });
   
       console.log('System message added: Attorney Client Privilege Activated.');
   
-      const userToBeAddedUserId = '914b9510-f021-701b-0ffb-e1650f8377ef';
-      const userToAddResponse = await client.models.UserIndex.list({
-        filter: { userId: { eq: userToBeAddedUserId } },
+      // Lawyer user ID (from your previously working Lambda)
+      const lawyerUserId = '4f4bbe96-d20b-4b3b-87b0-09925cf2be4f';
+  
+      // Fetch the lawyer user from UserIndex
+      const lawyerIndexResponse = await client.models.UserIndex.list({
+        filter: { userId: { eq: lawyerUserId } },
       });
   
-      if (userToAddResponse.data.length === 0) {
-        throw new Error('User to be added not found in UserIndex.');
+      if (lawyerIndexResponse.data.length === 0) {
+        throw new Error('Lawyer user not found in UserIndex.');
       }
   
-      const userToAdd = userToAddResponse.data[0];
+      const lawyerUser = lawyerIndexResponse.data[0];
+      const lawyerNickname = lawyerUser.userNickname || 'Unknown Lawyer';
   
-      const newGroupUser = await client.models.GroupUser.create({
+      // Add the lawyer to the group
+      await client.models.GroupUser.create({
         id: uuidv4(),
         groupId: groupId,
-        userId: userToBeAddedUserId,
+        userId: lawyerUserId,
         role: 'member',
-        userNickname: userToAdd.userNickname || 'Unknown User',
-        email: userToAdd.email || 'unknown@example.com',
-        
+        userNickname: lawyerNickname,
+        email: lawyerUser.email || 'unknown@example.com',
       });
   
-      console.log('Group user added successfully:', newGroupUser);
+      console.log('Lawyer added successfully to group.');
   
+      // Add the lawyer's introduction message
       await client.models.GroupMessage.create({
         id: uuidv4(),
         groupId: groupId,
-        content: 'Hello, I am your lawyer...',
-        userNickname: userToAdd.userNickname || 'Unknown User',
+        content: `Hello, my name is Luke the Man. I am an attorney with Sullo and Sullo.
+  Remember to review our terms and conditions so that your chat can be fully protected.
+  If you have any questions for me, send me a direct message or reach me at (***-***-****).`,
+        userNickname: lawyerNickname,
         type: 'text',
-        owner: userToBeAddedUserId
+        owner: lawyerUserId,
       });
   
-      console.log('Welcome message added successfully.');
+      console.log('Lawyer introduction message added successfully.');
   
     } catch (error) {
       console.error('Error processing VIP Lambda Click:', error);
-
     } finally {
-      setLoadingfr(false); 
+      setLoadingfr(false);
+      // Refresh the page to reflect the changes immediately
       window.location.reload();
     }
   };
-
+  
   const openPopup = () => setIsPopupOpen(true);
   const closePopup = () => setIsPopupOpen(false);
 
@@ -710,11 +711,12 @@ const PrivateMessagePage = () => {
           )}
 
           {/* Show FaLock (VIP lambda button) only if user is VIP and admin of the chat */}
-          {currentUserRole === 'VIP' && groupDetails?.adminId === fetchedUserId && (
+          {(currentUserRole === 'Owner' || (currentUserRole === 'VIP' && groupDetails?.adminId === fetchedUserId)) && (
             <a onClick={handleVipLambdaClick} className="text-black-600 text-xl">
               <FaLock />
             </a>
           )}
+
         </div>
       </div>
 
