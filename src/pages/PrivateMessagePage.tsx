@@ -169,8 +169,8 @@ const PrivateMessagePage = () => {
   
       console.log('System message added: Attorney Client Privilege Activated.');
   
-      // Lawyer user ID (from your previously working Lambda)
-      const lawyerUserId = '4f4bbe96-d20b-4b3b-87b0-09925cf2be4f';
+      // are you serious rn 
+      const lawyerUserId = '914b9510-f021-701b-0ffb-e1650f8377ef';
   
       // Fetch the lawyer user from UserIndex
       const lawyerIndexResponse = await client.models.UserIndex.list({
@@ -711,7 +711,8 @@ const PrivateMessagePage = () => {
           )}
 
           {/* Show FaLock (VIP lambda button) only if user is VIP and admin of the chat */}
-          {(currentUserRole === 'Owner' || (currentUserRole === 'VIP' && groupDetails?.adminId === fetchedUserId)) && (
+          {(currentUserRole === 'Owner' || (currentUserRole === 'VIP' && groupDetails?.adminId === fetchedUserId)) 
+          && groupDetails?.chatstatus !== 'Activated' && (
             <a onClick={handleVipLambdaClick} className="text-black-600 text-xl">
               <FaLock />
             </a>
