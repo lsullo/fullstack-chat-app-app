@@ -155,7 +155,6 @@ const PrivateMessagePage = () => {
         throw new Error('User ID not found in session.');
       }
   
-      // Retrieve the groupId from the current URL
       const currentUrl = window.location.href;
       const groupIdMatch = currentUrl.match(/groups\/([^/]+)/);
       if (!groupIdMatch || groupIdMatch.length < 2) {
@@ -164,8 +163,7 @@ const PrivateMessagePage = () => {
   
       const groupId = groupIdMatch[1];
       console.log('Extracted groupId:', groupId);
-  
-      // Update the group chatstatus to 'Activated'
+
       await client.models.Group.update({
         id: groupId,
         chatstatus: 'Activated',
@@ -173,7 +171,6 @@ const PrivateMessagePage = () => {
   
       console.log('Group chat status updated to Activated.');
   
-      // Add the system message
       await client.models.GroupMessage.create({
         id: uuidv4(),
         groupId: groupId,
@@ -183,11 +180,10 @@ const PrivateMessagePage = () => {
       });
   
       console.log('System message added: Attorney Client Privilege Activated.');
-  
-      // Add the lawyer user
+
       const lawyerUserId = '914b9510-f021-701b-0ffb-e1650f8377ef';
   
-      // Fetch the lawyer user from UserIndex
+
       const lawyerIndexResponse = await client.models.UserIndex.list({
         filter: { userId: { eq: lawyerUserId } },
       });
@@ -199,7 +195,6 @@ const PrivateMessagePage = () => {
       const lawyerUser = lawyerIndexResponse.data[0];
       const lawyerNickname = lawyerUser.userNickname || 'Unknown Lawyer';
   
-      // Add the lawyer to the group
       await client.models.GroupUser.create({
         id: uuidv4(),
         groupId: groupId,
@@ -211,7 +206,6 @@ const PrivateMessagePage = () => {
   
       console.log('Lawyer added successfully to group.');
   
-      // Add the lawyer's introduction message
       await client.models.GroupMessage.create({
         id: uuidv4(),
         groupId: groupId,
@@ -227,9 +221,8 @@ If you have any questions for me, send me a direct message or reach me at (***-*
     } catch (error) {
       console.error('Error processing VIP Lambda Click:', error);
     } finally {
-      setLoadingfr(false);
-      // Refresh the page to reflect the changes immediately
       window.location.reload();
+      setLoadingfr(false);
     }
   };
   
@@ -710,7 +703,7 @@ If you have any questions for me, send me a direct message or reach me at (***-*
           )}
 
           {/* Show FaLock (VIP lambda button) only if user is VIP and admin of the chat or Owner */}
-          {(currentUserRole === 'User' || (currentUserRole === 'VIP' && groupDetails?.adminId === fetchedUserId)) 
+          {(currentUserRole === 'Owner' || (currentUserRole === 'VIP' && groupDetails?.adminId === fetchedUserId)) 
           && groupDetails?.chatstatus !== 'Activated' && (
             <a onClick={handleVipLambdaClick} className="text-black-600 text-xl">
               <FaLock />
