@@ -1,4 +1,4 @@
-import { type ClientSchema, a, defineData } from '@aws-amplify/backend'
+import { type ClientSchema, a, defineData } from '@aws-amplify/backend';
 
 const schema = a.schema({
     Group: a
@@ -11,13 +11,12 @@ const schema = a.schema({
             members: a.hasMany('GroupUser', 'groupId'), 
             chatstatus: a.enum(['Def','Activated']), 
             creator: a.belongsTo('UserIndex', 'UserIndexId'),
-
         })
         .secondaryIndexes((index) => [index('groupUrlName')])
         .authorization((allow) => [
             allow.authenticated().to(['read','create','update', 'delete'])
         ]),
-        
+
     GroupMessage: a
         .model({
             groupId: a.id().required(),
@@ -28,8 +27,7 @@ const schema = a.schema({
             userNickname: a.string().required(),
         })
         .authorization((allow) => [
-            allow.owner().to(['read', 'create', 'delete']),
-            allow.authenticated().to(['read', 'delete']),
+            allow.authenticated().to(['create', 'read', 'delete'])
         ]),
 
     GroupUser: a
@@ -42,7 +40,9 @@ const schema = a.schema({
             email: a.string(),
         })
         .secondaryIndexes((index) => [index('userId')])
-        .authorization((allow) => [allow.authenticated().to(['create', 'read', 'delete'])]),
+        .authorization((allow) => [
+            allow.authenticated().to(['create', 'read', 'delete'])
+        ]),
 
     UserIndex: a
         .model({
@@ -57,11 +57,12 @@ const schema = a.schema({
             groups: a.hasMany('Group', 'UserIndexId'), 
         })
         .secondaryIndexes((index) => [index('userId')])
-        .authorization((allow) => [allow.authenticated().to(['create', 'read', 'update'])]),
-})
-    
+        .authorization((allow) => [
+            allow.authenticated().to(['create', 'read', 'update'])
+        ]),
+});
 
-export type Schema = ClientSchema<typeof schema>
+export type Schema = ClientSchema<typeof schema>;
 
 export const data = defineData({
     name: 'billionaire-luke-chat',
@@ -69,4 +70,4 @@ export const data = defineData({
     authorizationModes: {
         defaultAuthorizationMode: 'userPool',
     },
-})
+});

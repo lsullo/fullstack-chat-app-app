@@ -24,7 +24,9 @@ function formatTime(dateString: string): string {
 }
 
 const PrivateMessagePage = () => {
-  const { user } = useAuthenticator((context) => [context.user]);
+  // We won't destructure `user` since it's unused, but we still call useAuthenticator.
+  useAuthenticator((context) => [context.user]);
+
   const [userNickname, setUserNickname] = useState('');
   const { groupID } = useParams();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -44,7 +46,7 @@ const PrivateMessagePage = () => {
   const [loading, setLoading] = useState(true);
   const [loadingfr, setLoadingfr] = useState(false);
   const [fetchedUsers, setFetchedUsers] = useState<
-    Array<{ userId: string; userNickname: string; userIndexId: string; role: string }> 
+    Array<{ userId: string; userNickname: string; userIndexId: string; role: string }>
   >([]);
   const [userIdToRoleMap, setUserIdToRoleMap] = useState<{ [userId: string]: string }>({});
   const [loadingNicknames, setLoadingNicknames] = useState(true);
@@ -53,9 +55,22 @@ const PrivateMessagePage = () => {
   const [isPopup2Open, setIsPopup2Open] = useState(false);
   const [emailInput, setEmailInput] = useState('');
   const [memberEmails, setMemberEmails] = useState<string[]>([]);
-  const [userIdToIndexIdMap, setUserIdToIndexIdMap] = useState<{
-    [userId: string]: string;
-  }>({});
+ 
+  const [isOverLimit, setIsOverLimit] = useState(false);
+  const [shake, setShake] = useState(false);
+  
+  const shakeAnimation = {
+    animation: 'shake 0.5s',
+  };
+
+  const inputStyles = {
+    border: '1px solid',
+    borderColor: 'transparent',
+  };
+
+  const errorStyles = {
+    borderColor: 'red',
+  };
 
   const handlePaymentLinkClick = async () => {
     const currentUrl = window.location.href;
@@ -169,7 +184,7 @@ const PrivateMessagePage = () => {
   
       console.log('System message added: Attorney Client Privilege Activated.');
   
-      // are you serious rn 
+      // Add the lawyer user
       const lawyerUserId = '914b9510-f021-701b-0ffb-e1650f8377ef';
   
       // Fetch the lawyer user from UserIndex
@@ -201,11 +216,10 @@ const PrivateMessagePage = () => {
         id: uuidv4(),
         groupId: groupId,
         content: `Hello, my name is Luke the Man. I am an attorney with Sullo and Sullo.
-  Remember to review our terms and conditions so that your chat can be fully protected.
-  If you have any questions for me, send me a direct message or reach me at (***-***-****).`,
+Remember to review our terms and conditions so that your chat can be fully protected.
+If you have any questions for me, send me a direct message or reach me at (***-***-****).`,
         userNickname: lawyerNickname,
         type: 'text',
-        owner: lawyerUserId,
       });
   
       console.log('Lawyer introduction message added successfully.');
@@ -224,21 +238,6 @@ const PrivateMessagePage = () => {
 
   const openPopup2 = () => setIsPopup2Open(true);
   const closePopup2 = () => setIsPopup2Open(false);
-
-  const [isOverLimit, setIsOverLimit] = useState(false);
-  const [shake, setShake] = useState(false);
-  const shakeAnimation = {
-    animation: 'shake 0.5s',
-  };
-
-  const inputStyles = {
-    border: '1px solid',
-    borderColor: 'transparent',
-  };
-
-  const errorStyles = {
-    borderColor: 'red',
-  };
 
   const handleEmailInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setEmailInput(e.target.value);
@@ -271,6 +270,7 @@ const PrivateMessagePage = () => {
     const updatedMemberEmails = [...memberEmails, emailInput.trim()];
 
     for (const email of updatedMemberEmails) {
+      if (!email) continue; // Avoid empty strings
       try {
         const userIndexResponse = await client.models.UserIndex.list({
           filter: { email: { eq: email } },
@@ -426,10 +426,10 @@ const PrivateMessagePage = () => {
             userId: string;
             userNickname: string;
             userIndexId: string;
-            role: string; 
+            role: string;
           }> = [];
           const userIdToIndexId: { [userId: string]: string } = {};
-          const userIdToRole: { [userId: string]: string } = {}; 
+          const userIdToRole: { [userId: string]: string } = {};
 
           for (const groupUser of groupUserResponse.data) {
             if (groupUser.userNickname) {
@@ -463,8 +463,7 @@ const PrivateMessagePage = () => {
           }
 
           setFetchedUsers(usersList);
-          setUserIdToIndexIdMap(userIdToIndexId);
-          setUserIdToRoleMap(userIdToRole); 
+          setUserIdToRoleMap(userIdToRole);
 
           setLoading(false);
         } catch (error) {
@@ -710,14 +709,13 @@ const PrivateMessagePage = () => {
             </a>
           )}
 
-          {/* Show FaLock (VIP lambda button) only if user is VIP and admin of the chat */}
-          {(currentUserRole === 'Owner' || (currentUserRole === 'VIP' && groupDetails?.adminId === fetchedUserId)) 
+          {/* Show FaLock (VIP lambda button) only if user is VIP and admin of the chat or Owner */}
+          {(currentUserRole === 'User' || (currentUserRole === 'VIP' && groupDetails?.adminId === fetchedUserId)) 
           && groupDetails?.chatstatus !== 'Activated' && (
             <a onClick={handleVipLambdaClick} className="text-black-600 text-xl">
               <FaLock />
             </a>
           )}
-
         </div>
       </div>
 
@@ -778,7 +776,7 @@ const PrivateMessagePage = () => {
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-65 z-50">
             <div className="bg-white p-6 rounded-md shadow-md">
               <h2 className="text-xl mb-4">
-                Are you sure you want to leave group?
+                Are you sure you want to leave the group?
               </h2>
               <form onSubmit={handleLeaveGroup}>
                 <div className="flex justify-center space-x-2 mt-4">
@@ -810,8 +808,10 @@ const PrivateMessagePage = () => {
         </style>
         {/* Chat messages */}
         {msgs.map((msg) => {
-          const userIndexId = msg.owner ? userIdToIndexIdMap[msg.owner] || '' : '';
-          const role = msg.owner ? userIdToRoleMap[msg.owner] || '' : ''; 
+          // Determine role by matching msg.userNickname with fetchedUsers
+          const matchedUser = fetchedUsers.find(u => u.userNickname === msg.userNickname);
+          const role = matchedUser?.role || '';
+          const userIndexId = matchedUser?.userIndexId || '';
 
           return (
             <div
@@ -819,7 +819,7 @@ const PrivateMessagePage = () => {
               className={clsx(
                 'w-full flex',
                 msg.type === 'system' ? 'justify-center' :
-                msg.owner !== user.username ? 'justify-start' : 'justify-end'
+                msg.userNickname !== userNickname ? 'justify-start' : 'justify-end'
               )}
             >
               {msg.type === 'system' ? (
@@ -827,9 +827,7 @@ const PrivateMessagePage = () => {
                   groupDetails?.chatstatus === 'Activated' ? 'text-gray-300' : 'text-gray-333'
                 }`}>
                   <p className="text-sm italic">{msg.content}</p>
-                  <time className={`text-sm italic text-center w-full opacity-50 ${
-                  groupDetails?.chatstatus === 'Activated' ? 'text-gray-300' : 'text-gray-333'
-                }`}>
+                  <time className="text-sm italic opacity-50">
                     {formatTime(msg.createdAt)}
                   </time>
                 </div>
@@ -839,7 +837,7 @@ const PrivateMessagePage = () => {
                     <div
                       className={clsx(
                         'chat max-w-xl w-1/3',
-                        msg.owner !== user.username ? 'chat-start' : 'chat-end'
+                        msg.userNickname !== userNickname ? 'chat-start' : 'chat-end'
                       )}
                     >
                       <div className="chat-header">
@@ -872,7 +870,7 @@ const PrivateMessagePage = () => {
                             'chat-bubble',
                             role === 'Lawyer'
                               ? ''
-                              : msg.owner !== user.username
+                              : msg.userNickname !== userNickname
                               ? 'chat-bubble-accent'
                               : 'chat-bubble-info',
                             groupDetails?.chatstatus === 'Activated'
@@ -896,7 +894,7 @@ const PrivateMessagePage = () => {
                             'chat-bubble',
                             role === 'Lawyer'
                               ? ''
-                              : msg.owner !== user.username
+                              : msg.userNickname !== userNickname
                               ? 'chat-bubble-accent'
                               : 'chat-bubble-info',
                             groupDetails?.chatstatus === 'Activated'
