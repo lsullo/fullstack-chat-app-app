@@ -104,6 +104,7 @@ const PrivateMessagePage = () => {
     } catch (error) {
       console.error('Error updating UserIndex or redirecting to Stripe:', error);
       setLoadingfr(false);
+      setLoading(false);// see if fixes
     }
   };
 

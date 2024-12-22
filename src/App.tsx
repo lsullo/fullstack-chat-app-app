@@ -6,7 +6,6 @@ import HomePage from './pages/HomePage';
 import GroupsPage from './pages/GroupsPage';
 import PrivateMessagePage from './pages/PrivateMessagePage';
 import PaymentSuccess from './pages/PaymentSuccess';
-//import GroupManagement from './pages/GroupManagement';
 import ProfilePage from './pages/Profile';
 import GroupDetails from './pages/GroupDetails';
 
@@ -37,10 +36,6 @@ const router = createBrowserRouter([
             path: 'paymentsuccess', 
             element: <PaymentSuccess />,
           },
-         // {
-           // path: 'GroupManagement', 
-          //  element: <GroupManagement />,
-          //},
           {
             path: 'groupdetails/:groupID', 
             element: <GroupDetails />,

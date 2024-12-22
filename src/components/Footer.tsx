@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { FaHome, FaComments, FaInfoCircle, FaBars } from 'react-icons/fa'; // Import icons
+import { FaHome, FaComments, FaInfoCircle, FaBars } from 'react-icons/fa'; 
 
 const Footer = () => {
   return (

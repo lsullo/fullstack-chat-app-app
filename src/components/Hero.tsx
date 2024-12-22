@@ -7,7 +7,7 @@ const Hero = () => {
 				<div className="max-w-md">
 					<h1 className="text-2xl font-bold"> Recent Updates/Announcements:</h1>
 					<p className="py-6">
-						 Working on getting the L chats working ☦️
+						 ☦️
 					</p>
 					<Link to="/groups" className="btn btn-primary" style={{ marginLeft: '10px' }}>
 						Group Chats
