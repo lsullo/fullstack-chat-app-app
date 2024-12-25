@@ -13,6 +13,9 @@ export const handler: Handler = async (event) => {
       throw new Error("client_reference_id not found in the event data.");
     }
 
+    // Get Stripe customer id from the event
+    const stripeCustomerId = event.detail?.data?.object?.customer;
+
     console.log("Querying UserIndex table with userId:", userId);
 
     const userIndexParams = {
@@ -36,12 +39,14 @@ export const handler: Handler = async (event) => {
     const userItem = userResult.Items[0];
     const actualId = userItem.id; // Use this 'id' field to update
 
+    // Update the user's role to VIP and store the Stripe customer ID
     const updateUserParams = {
       TableName: userIndexTable,
       Key: { id: actualId }, // Update by the primary key 'id', not userId
-      UpdateExpression: "SET RedPill = :vip",
+      UpdateExpression: "SET RedPill = :vip, customeridfield = :custid",
       ExpressionAttributeValues: {
         ":vip": "VIP",
+        ":custid": stripeCustomerId || "none", // fallback if not present
       },
       ReturnValues: "UPDATED_NEW",
     };

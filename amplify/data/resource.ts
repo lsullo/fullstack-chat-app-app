@@ -55,6 +55,7 @@ const schema = a.schema({
             bio: a.string(),
             lockedbio: a.string(),
             groups: a.hasMany('Group', 'UserIndexId'), 
+            stripeCustomerId: a.string(),
         })
         .secondaryIndexes((index) => [index('userId')])
         .authorization((allow) => [

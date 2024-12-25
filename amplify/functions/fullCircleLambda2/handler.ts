@@ -9,28 +9,29 @@ const groupMessageTable = "GroupMessage-zym4s5tojfekjijegwzlhfhur4-NONE";
 const groupTable = "Group-zym4s5tojfekjijegwzlhfhur4-NONE";
 const groupUserTable = "GroupUser-zym4s5tojfekjijegwzlhfhur4-NONE";
 
-
 const usertoberemoveduserid = "914b9510-f021-701b-0ffb-e1650f8377ef";
 
-const userIndexByUserIdIndex = "userIndicesByUserId"; 
+const userIndexByStripeCustomerIdIndex = "userIndicesByStripeCustomerId"; // The new GSI name
 const groupUserByUserIdIndex = "groupUsersByUserId"; 
 
 export const handler: Handler = async (event) => {
   try {
     console.log("Received event:", JSON.stringify(event, null, 2));
 
-    const userId = event.detail?.data?.object?.client_reference_id;
-    if (!userId) {
-      throw new Error("client_reference_id not found in the event data.");
+    // 1. Extract the Stripe customer ID from event
+    const stripeCustomerId = event.detail?.data?.object?.customer;
+    if (!stripeCustomerId) {
+      throw new Error("No Stripe customer ID found in the event data.");
     }
 
-    console.log("Querying UserIndex table with userId:", userId);
+    // 2. Query by the new GSI on stripeCustomerId
+    console.log("Querying UserIndex table with stripeCustomerId:", stripeCustomerId);
     const userIndexParams = {
       TableName: userIndexTable,
-      IndexName: userIndexByUserIdIndex,
-      KeyConditionExpression: "userId = :userId",
+      IndexName: userIndexByStripeCustomerIdIndex,
+      KeyConditionExpression: "stripeCustomerId = :cust",
       ExpressionAttributeValues: {
-        ":userId": userId,
+        ":cust": stripeCustomerId,
       },
     };
 
@@ -38,9 +39,30 @@ export const handler: Handler = async (event) => {
     console.log("UserIndex Query Result:", JSON.stringify(userResult, null, 2));
 
     if (!userResult.Items || userResult.Items.length === 0) {
-      throw new Error("User not found with the provided userId.");
+      throw new Error("User not found with the provided stripeCustomerId.");
     }
 
+    // Let's assume there's only 1 record. If there's more, handle accordingly
+    const userItem = userResult.Items[0];
+    const userId = userItem.userId; 
+    const actualId = userItem.id;
+
+    // Optional: Revert user from VIP => User (if that's what you need)
+    // (Or do nothing if you only care about group changes.)
+    const updateUserParams = {
+      TableName: userIndexTable,
+      Key: { id: actualId },
+      UpdateExpression: "SET RedPill = :userRole",
+      ExpressionAttributeValues: {
+        ":userRole": "User",
+      },
+      ReturnValues: "UPDATED_NEW",
+    };
+
+    const updateUserResult = await dynamoDB.update(updateUserParams).promise();
+    console.log("User role updated successfully:", JSON.stringify(updateUserResult, null, 2));
+
+    // 3. Proceed with the group logic, same as your code
     const groupUserParams = {
       TableName: groupUserTable,
       IndexName: groupUserByUserIdIndex,
@@ -99,10 +121,10 @@ export const handler: Handler = async (event) => {
         TableName: groupMessageTable,
         Item: newMessage,
       };
-
       await dynamoDB.put(groupMessageParams).promise();
       console.log("System message added successfully:", newMessage);
 
+      // Lawyer removal logic...
       const lawyerGroupUserParams = {
         TableName: groupUserTable,
         IndexName: groupUserByUserIdIndex,
@@ -136,15 +158,18 @@ export const handler: Handler = async (event) => {
     return {
       statusCode: 200,
       body: JSON.stringify({
-        message: "All applicable groups updated (only those where user is admin), attorney-client privilege deactivated, and lawyer removal attempted where applicable.",
+        message:
+          "All applicable groups updated (only those where user is admin), attorney-client privilege deactivated, and lawyer removal attempted where applicable.",
       }),
     };
-
   } catch (error) {
     console.error("Error processing request:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ message: "Error processing request", error: (error as Error).message }),
+      body: JSON.stringify({
+        message: "Error processing request",
+        error: (error as Error).message,
+      }),
     };
   }
 };
