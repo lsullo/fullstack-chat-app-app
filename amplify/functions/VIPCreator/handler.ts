@@ -14,7 +14,7 @@ export const handler: Handler = async (event) => {
     }
 
     // Get Stripe customer id from the event
-    const stripeCustomerId = event.detail?.data?.object?.customer;
+    const stripeCustomerId = event.detail?.data?.object?.customer || "none";
 
     console.log("Querying UserIndex table with userId:", userId);
 
@@ -39,14 +39,14 @@ export const handler: Handler = async (event) => {
     const userItem = userResult.Items[0];
     const actualId = userItem.id; // Use this 'id' field to update
 
-    // Update the user's role to VIP and store the Stripe customer ID
+    // Update the user's role to VIP and store the Stripe customer ID under "stripeCustomerId"
     const updateUserParams = {
       TableName: userIndexTable,
       Key: { id: actualId }, // Update by the primary key 'id', not userId
-      UpdateExpression: "SET RedPill = :vip, customeridfield = :custid",
+      UpdateExpression: "SET RedPill = :vip, stripeCustomerId = :custid",
       ExpressionAttributeValues: {
         ":vip": "VIP",
-        ":custid": stripeCustomerId || "none", // fallback if not present
+        ":custid": stripeCustomerId,
       },
       ReturnValues: "UPDATED_NEW",
     };

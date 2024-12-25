@@ -57,7 +57,10 @@ const schema = a.schema({
             groups: a.hasMany('Group', 'UserIndexId'), 
             stripeCustomerId: a.string(),
         })
-        .secondaryIndexes((index) => [index('userId')])
+        .secondaryIndexes((index) => [
+            index('userId'), 
+            index('stripeCustomerId'),])
+        
         .authorization((allow) => [
             allow.authenticated().to(['create', 'read', 'update'])
         ]),
