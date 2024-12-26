@@ -27,7 +27,7 @@ const GroupDetails = () => {
       userNickname: string | null;
       photoUrl: string | null;
       email: string | null;
-      role: 'Admin' | 'Member';
+      role: 'Admin' | 'Member' | 'Lawyer';
     }>
   >([]);
 
@@ -84,18 +84,28 @@ const GroupDetails = () => {
 
         const enrichedUsers = await Promise.all(
           groupUsersResponse.data.map(async (groupUser) => {
+  
             const userIndexResponse = await client.models.UserIndex.list({
               filter: { userId: { eq: groupUser.userId } },
             });
-
             const userIndex = userIndexResponse.data[0];
+
+            let mappedRole: 'Admin' | 'Member' | 'Lawyer';
+            if (groupUser.role === 'admin') {
+              mappedRole = 'Admin';
+            } else if (groupUser.role === 'Lawyer') {
+              mappedRole = 'Lawyer';
+            } else {
+              mappedRole = 'Member';
+            }
+
             return {
               userIndexId: userIndex?.id || '',
               userId: groupUser.userId,
               userNickname: userIndex?.userNickname || 'Anonymous',
               photoUrl: userIndex?.photoId || null,
               email: userIndex?.email || 'No Email',
-              role: groupUser.role === 'admin' ? ('Admin' as const) : ('Member' as const),
+              role: mappedRole,
             };
           })
         );
@@ -131,6 +141,19 @@ const GroupDetails = () => {
     if (!userIdToRemove) return;
 
     try {
+
+      const userToRemoveObj = groupUsers.find((user) => user.userId === userIdToRemove);
+      if (!userToRemoveObj) {
+        console.error('User to remove not found in local state.');
+        return;
+      }
+
+      if (userToRemoveObj.role === 'Lawyer') {
+        console.warn('Cannot remove a Lawyer from the group.');
+        setUserIdToRemove(null);
+        return;
+      }
+
       const groupUserResponse = await client.models.GroupUser.list({
         filter: {
           groupId: { eq: groupDetails?.groupId || '' },
@@ -141,6 +164,7 @@ const GroupDetails = () => {
       const groupUser = groupUserResponse.data[0];
 
       if (groupUser) {
+
         await client.models.GroupUser.delete({ id: groupUser.id });
         setGroupUsers((prevUsers) => prevUsers.filter((user) => user.userId !== userIdToRemove));
 
@@ -209,7 +233,7 @@ const GroupDetails = () => {
                   userNickname: user.userNickname || 'Anonymous',
                   photoUrl: user.photoId || null,
                   email: user.email || 'No Email',
-                  role: 'Member',
+                  role: 'Member', 
                 },
               ]);
 
@@ -351,14 +375,17 @@ const GroupDetails = () => {
                     </Link>
                     <p className="text-sm text-gray-600">{user.email}</p>
                     <p className="text-sm font-medium">{user.role}</p>
-                    {currentUserId === groupDetails?.adminId && user.userId !== groupDetails?.adminId && (
-                      <button
-                        onClick={() => setUserIdToRemove(user.userId)}
-                        className="absolute top-2 right-2 text-red-600"
-                      >
-                        <FaTimes />
-                      </button>
-                    )}
+
+                    {currentUserId === groupDetails?.adminId &&
+                      user.userId !== groupDetails?.adminId &&
+                      user.role !== 'Lawyer' && (
+                        <button
+                          onClick={() => setUserIdToRemove(user.userId)}
+                          className="absolute top-2 right-2 text-red-600"
+                        >
+                          <FaTimes />
+                        </button>
+                      )}
                   </div>
                 </div>
               ))}

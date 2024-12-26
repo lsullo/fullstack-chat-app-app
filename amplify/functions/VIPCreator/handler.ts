@@ -13,14 +13,13 @@ export const handler: Handler = async (event) => {
       throw new Error("client_reference_id not found in the event data.");
     }
 
-    // Get Stripe customer id from the event
     const stripeCustomerId = event.detail?.data?.object?.customer || "none";
 
     console.log("Querying UserIndex table with userId:", userId);
 
     const userIndexParams = {
       TableName: userIndexTable,
-      IndexName: "userIndicesByUserId", // Secondary index on userId
+      IndexName: "userIndicesByUserId", 
       KeyConditionExpression: "userId = :userId",
       ExpressionAttributeValues: {
         ":userId": userId,
@@ -35,14 +34,12 @@ export const handler: Handler = async (event) => {
       throw new Error("User not found with the provided userId.");
     }
 
-    // Extract the actual primary key (id) of the UserIndex item
     const userItem = userResult.Items[0];
-    const actualId = userItem.id; // Use this 'id' field to update
+    const actualId = userItem.id; 
 
-    // Update the user's role to VIP and store the Stripe customer ID under "stripeCustomerId"
     const updateUserParams = {
       TableName: userIndexTable,
-      Key: { id: actualId }, // Update by the primary key 'id', not userId
+      Key: { id: actualId }, 
       UpdateExpression: "SET RedPill = :vip, stripeCustomerId = :custid",
       ExpressionAttributeValues: {
         ":vip": "VIP",

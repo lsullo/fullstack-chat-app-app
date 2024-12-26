@@ -34,7 +34,7 @@ const schema = a.schema({
         .model({
             groupId: a.id().required(),
             userId: a.id().required(),
-            role: a.enum(['admin', 'member']), 
+            role: a.enum(['admin', 'member', 'Lawyer']), 
             group: a.belongsTo('Group', 'groupId'),
             userNickname: a.string(),
             email: a.string(),

@@ -24,9 +24,7 @@ function formatTime(dateString: string): string {
 }
 
 const PrivateMessagePage = () => {
-  // We won't destructure `user` since it's unused, but we still call useAuthenticator.
   useAuthenticator((context) => [context.user]);
-
   const [userNickname, setUserNickname] = useState('');
   const { groupID } = useParams();
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -77,10 +75,10 @@ const PrivateMessagePage = () => {
     const stripeUrl = `https://buy.stripe.com/test_5kA28o5TpeLY9peeUU`;
 
     try {
-      setLoadingfr(true);
+      
       const { tokens } = await fetchAuthSession();
-
       const userId = tokens?.idToken?.payload.sub;
+
       if (userId) {
         const userIndexResponse = await client.models.UserIndex.list({
           filter: { userId: { eq: userId } },
@@ -103,8 +101,7 @@ const PrivateMessagePage = () => {
       }
     } catch (error) {
       console.error('Error updating UserIndex or redirecting to Stripe:', error);
-      setLoadingfr(false);
-      setLoading(false);// see if fixes
+    
     }
   };
 
@@ -264,7 +261,7 @@ If you have any questions for me, send me a direct message or reach me at (***-*
     const updatedMemberEmails = [...memberEmails, emailInput.trim()];
 
     for (const email of updatedMemberEmails) {
-      if (!email) continue; // Avoid empty strings
+      if (!email) continue; 
       try {
         const userIndexResponse = await client.models.UserIndex.list({
           filter: { email: { eq: email } },
@@ -802,7 +799,6 @@ If you have any questions for me, send me a direct message or reach me at (***-*
         </style>
         {/* Chat messages */}
         {msgs.map((msg) => {
-          // Determine role by matching msg.userNickname with fetchedUsers
           const matchedUser = fetchedUsers.find(u => u.userNickname === msg.userNickname);
           const role = matchedUser?.role || '';
           const userIndexId = matchedUser?.userIndexId || '';
