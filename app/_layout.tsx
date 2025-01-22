@@ -1,39 +1,32 @@
-import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
-import { useFonts } from 'expo-font';
+import React from 'react';
 import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import 'react-native-reanimated';
+import { Amplify } from 'aws-amplify';
+import { Authenticator, useAuthenticator } from '@aws-amplify/ui-react-native';
+import outputs from '../amplify_outputs.json'; 
 
-import { useColorScheme } from '@/hooks/useColorScheme';
-
-// Prevent the splash screen from auto-hiding before asset loading is complete.
-SplashScreen.preventAutoHideAsync();
+Amplify.configure(outputs);
 
 export default function RootLayout() {
-  const colorScheme = useColorScheme();
-  const [loaded] = useFonts({
-    SpaceMono: require('../assets/fonts/SpaceMono-Regular.ttf'),
-  });
+  return (
+    <Authenticator.Provider>
+      <ProtectedLayout>
+        <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="(tabs)" /> 
+          {/* or any other root routes */}
+        </Stack>
+      </ProtectedLayout>
+    </Authenticator.Provider>
+  );
+}
 
-  useEffect(() => {
-    if (loaded) {
-      SplashScreen.hideAsync();
-    }
-  }, [loaded]);
+function ProtectedLayout({ children }: { children: React.ReactNode }) {
+  const { user } = useAuthenticator((context) => [context.user]);
 
-  if (!loaded) {
-    return null;
+  if (!user) {
+    // If there's no user, show the Amplify Authenticator screens
+    return <Authenticator />;
   }
 
-  return (
-    <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="+not-found" />
-      </Stack>
-      <StatusBar style="auto" />
-    </ThemeProvider>
-  );
+  // Otherwise, render the protected content
+  return <>{children}</>;
 }
