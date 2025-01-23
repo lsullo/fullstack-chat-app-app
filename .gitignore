@@ -39,5 +39,5 @@ app-example
 
 # amplify
 .amplify
-amplify_outputs*
-amplifyconfiguration*
+#amplify_outputs*
+#amplifyconfiguration*
