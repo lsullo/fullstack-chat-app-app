@@ -10,7 +10,7 @@
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.luketheman.faith2004"
+      "bundleIdentifier": "com.redactedchats.redacted"
     },
     "android": {
       "adaptiveIcon": {
