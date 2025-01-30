@@ -1,7 +1,7 @@
 {
   "expo": {
-    "name": "faith2004",
-    "slug": "faith2004",
+    "name": "RedactedChats",
+    "slug": "redactedchats",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -13,11 +13,11 @@
       "bundleIdentifier": "com.redactedchats.redacted"
     },
     "android": {
+      "package": "com.redactedchats.redacted",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      },
-      "package": "com.redactedchats.redacted"
+      }
     },
     "web": {
       "bundler": "metro",
@@ -44,8 +44,9 @@
         "origin": false
       },
       "eas": {
-        "projectId": "078e98a0-cb51-421b-8388-036810d12dd7"
+        "projectId": "c14e9ad0-8915-475a-be64-e6413c029714"
       }
-    }
+    },
+    "owner": "luketheman"
   }
 }
