@@ -16,27 +16,20 @@ import {
 
 import { useRouter, useLocalSearchParams } from 'expo-router'; 
 import { SafeAreaView } from 'react-native-safe-area-context';
-
 import { FontAwesome5 } from '@expo/vector-icons'; 
 import Ionicons from '@expo/vector-icons/Ionicons';
-
-// Amplify client
 import { generateClient } from 'aws-amplify/api';
 import { fetchAuthSession } from 'aws-amplify/auth';
-// If you have a real schema, import it:
 import { Schema } from '../amplify/data/resource';
 
-// Create Amplify client
 const client = generateClient<Schema>();
 
 interface GroupDetailsProps {}
 
 const GroupDetails: React.FC<GroupDetailsProps> = () => {
-  // ------------------- Navigation & Route -------------------
+  
   const router = useRouter();
-  const { groupID } = useLocalSearchParams(); // e.g. /group-details?groupID=xxx
-
-  // ------------------- State -------------------
+  const { groupID } = useLocalSearchParams(); 
   const [loading, setLoading] = useState(true);
   const [groupNotFound, setGroupNotFound] = useState(false);
   const [groupDetails, setGroupDetails] = useState<{
@@ -58,17 +51,12 @@ const GroupDetails: React.FC<GroupDetailsProps> = () => {
   const [currentUserId, setCurrentUserId] = useState('');
   const [isEditingGroupName, setIsEditingGroupName] = useState(false);
   const [groupNameInput, setGroupNameInput] = useState('');
-
-  // ID of the user to remove from the group
   const [userIdToRemove, setUserIdToRemove] = useState<string | null>(null);
-
-  // Add member popup
   const [showAddMemberPopup, setShowAddMemberPopup] = useState(false);
   const [emailInput, setEmailInput] = useState('');
   const [memberEmails, setMemberEmails] = useState<string[]>([]);
 
-  // ------------------- Effects -------------------
-  // 1) Current user
+
   useEffect(() => {
     (async () => {
       try {
@@ -81,7 +69,6 @@ const GroupDetails: React.FC<GroupDetailsProps> = () => {
     })();
   }, []);
 
-  // 2) Fetch group details
   useEffect(() => {
     const fetchGroupDetails = async () => {
       if (!groupID) {
@@ -105,11 +92,11 @@ const GroupDetails: React.FC<GroupDetailsProps> = () => {
         });
         setGroupNameInput(g.groupname || '');
 
-        // fetch group users
+
         const groupUsersResponse = await client.models.GroupUser.list({
           filter: { groupId: { eq: g.id } },
         });
-        // For each groupUser, get the userIndex
+   
         const enriched = await Promise.all(
           groupUsersResponse.data.map(async (gu) => {
             const userIdxResp = await client.models.UserIndex.list({
@@ -145,7 +132,7 @@ const GroupDetails: React.FC<GroupDetailsProps> = () => {
   }, [groupID]);
 
   // ------------------- Handlers -------------------
-  // Save group name
+ 
   const handleSaveGroupName = async () => {
     if (!groupDetails?.groupId) return;
     try {
@@ -160,11 +147,11 @@ const GroupDetails: React.FC<GroupDetailsProps> = () => {
     }
   };
 
-  // Remove a member
+
   const handleRemoveMember = async () => {
     if (!userIdToRemove || !groupDetails?.groupId) return;
     try {
-      // find the user in local state
+   
       const userObj = groupUsers.find((u) => u.userId === userIdToRemove);
       if (!userObj) return;
 
@@ -182,12 +169,11 @@ const GroupDetails: React.FC<GroupDetailsProps> = () => {
       });
       const gu = groupUserResp.data[0];
       if (gu) {
-        // delete
+        
         await client.models.GroupUser.delete({ id: gu.id });
-        // remove from local state
+        
         setGroupUsers((prev) => prev.filter((u) => u.userId !== userIdToRemove));
 
-        // system message
         const userIndexResp = await client.models.UserIndex.list({
           filter: { userId: { eq: userIdToRemove } },
         });
@@ -208,10 +194,10 @@ const GroupDetails: React.FC<GroupDetailsProps> = () => {
     }
   };
 
-  // Add members
+ 
   const handleAddMembers = async () => {
     if (!groupDetails?.groupId) return;
-    // gather all emails
+   
     const toProcess = [...memberEmails];
     if (emailInput.trim()) {
       toProcess.push(emailInput.trim());
@@ -225,12 +211,12 @@ const GroupDetails: React.FC<GroupDetailsProps> = () => {
         });
         if (idxResp.data.length > 0) {
           const user = idxResp.data[0];
-          // check if already in group
+        
           const guResp = await client.models.GroupUser.list({
             filter: { groupId: { eq: groupDetails.groupId }, userId: { eq: user.userId } },
           });
           if (guResp.data.length === 0) {
-            // create new membership
+      
             await client.models.GroupUser.create({
               groupId: groupDetails.groupId,
               userId: user.userId,
@@ -238,7 +224,7 @@ const GroupDetails: React.FC<GroupDetailsProps> = () => {
               role: 'member',
               userNickname: user.userNickname,
             });
-            // add to local state
+       
             setGroupUsers((prev) => [
               ...prev,
               {
@@ -250,7 +236,7 @@ const GroupDetails: React.FC<GroupDetailsProps> = () => {
                 role: 'Member',
               },
             ]);
-            // system message
+           
             await client.models.GroupMessage.create({
               groupId: groupDetails.groupId,
               userId: 'system-user-id',
@@ -263,7 +249,7 @@ const GroupDetails: React.FC<GroupDetailsProps> = () => {
           console.warn(`${email} not found in user index.`);
         }
       }
-      // done
+      
       setMemberEmails([]);
       setEmailInput('');
       setShowAddMemberPopup(false);
@@ -272,7 +258,7 @@ const GroupDetails: React.FC<GroupDetailsProps> = () => {
     }
   };
 
-  // Input changes
+
   const handleEmailInputChange = (val: string) => {
     setEmailInput(val);
   };
@@ -280,12 +266,9 @@ const GroupDetails: React.FC<GroupDetailsProps> = () => {
     setMemberEmails((prev) => prev.filter((e) => e !== email));
   };
 
-  // For pressing Enter in RN, you might do `onSubmitEditing`
-  // or a separate "Add" button
-
-  // Navigation back
+  
   const handleBack = () => {
-    router.back(); // or router.push('/somewhere')
+    router.back();
   };
 
   // ------------------- Render -------------------
@@ -307,16 +290,19 @@ const GroupDetails: React.FC<GroupDetailsProps> = () => {
     );
   }
 
-  // Now the main content
+ 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
+
         {/* Back Arrow */}
+
         <TouchableOpacity onPress={handleBack} style={[styles.backButton]}>
           <Ionicons name="arrow-back" size={24} color="black" />
         </TouchableOpacity>
 
         {/* Group Title / Edit */}
+        
         <View style={styles.headerWrapper}>
           {isEditingGroupName ? (
             <View style={styles.row}>

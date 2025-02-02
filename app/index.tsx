@@ -6,7 +6,7 @@ export default function IndexRedirect() {
   const router = useRouter();
 
   useEffect(() => {
-    // Let the Root Layout mount first, then navigate
+   
     requestAnimationFrame(() => {
       router.replace('/groups');
     });

@@ -12,7 +12,7 @@ export default function RootLayout() {
       <ProtectedLayout>
         <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="(tabs)" /> 
-          {/* or any other root routes */}
+          {/* add routes here if needed */}
         </Stack>
       </ProtectedLayout>
     </Authenticator.Provider>
@@ -23,10 +23,9 @@ function ProtectedLayout({ children }: { children: React.ReactNode }) {
   const { user } = useAuthenticator((context) => [context.user]);
 
   if (!user) {
-    // If there's no user, show the Amplify Authenticator screens
+    
     return <Authenticator />;
   }
 
-  // Otherwise, render the protected content
   return <>{children}</>;
 }

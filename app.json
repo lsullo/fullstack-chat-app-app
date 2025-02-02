@@ -4,16 +4,16 @@
     "slug": "redactedchats",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/RIDEA2.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.redactedchats.redacted"
+      "bundleIdentifier": "com.luketheman.faith2004"
     },
     "android": {
-      "package": "com.redactedchats.redacted",
+      "package": "com.luketheman.faith2004",
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"

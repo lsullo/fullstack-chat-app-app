@@ -19,11 +19,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { FontAwesome5 } from '@expo/vector-icons';
-import { v4 as uuidv4 } from 'uuid';
+
+// Removed unused imports (uuid, uploadData, etc.)
+// import { v4 as uuidv4 } from 'uuid';
+// import { uploadData } from 'aws-amplify/storage';
 
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { generateClient } from 'aws-amplify/api';
-import { uploadData } from 'aws-amplify/storage';
 
 // ------------------- IMPORTANT -------------------
 // Just import your real schema from this path:
@@ -32,11 +34,6 @@ import { Schema } from '../amplify/data/resource';
 
 // Create the Amplify client (with your real schema)
 const client = generateClient<Schema>();
-
-/** Minimal file picker placeholder (use expo-image-picker in real code) */
-async function pickImage(): Promise<File | null> {
-  return null;
-}
 
 /** Format time helper */
 function formatTime(dateVal?: string) {
@@ -47,49 +44,27 @@ function formatTime(dateVal?: string) {
 
 export default function PrivateMessagePage() {
   const router = useRouter();
-  // e.g. /private-message?groupId=abc123
   const { groupId } = useLocalSearchParams();
-
-  // Basic states
   const [loading, setLoading] = useState(true);
   const [groupNotFound, setGroupNotFound] = useState(false);
   const [isUserInGroup, setIsUserInGroup] = useState(true);
-
-  // Current user info
   const [fetchedUserId, setFetchedUserId] = useState('');
   const [userNickname, setUserNickname] = useState('');
-
-  // Group details
   const [groupDetails, setGroupDetails] = useState<Schema['Group']['type'] | null>(null);
-
-  // Messages (with robust fix: each has userId)
   const [msgs, setMsgs] = useState<Schema['GroupMessage']['type'][]>([]);
-
-  // Group members info
   const [fetchedUsers, setFetchedUsers] = useState<
     { userId: string; userNickname: string; userIndexId: string; role: string }[]
   >([]);
-
-  // Compose bar
   const [msgText, setMsgText] = useState('');
-  const [msgFile, setMsgFile] = useState<File | null>(null);
   const [isOverLimit, setIsOverLimit] = useState(false);
   const [shake, setShake] = useState(false);
-
-  // Popups
   const [isPopupOpen, setIsPopupOpen] = useState(false);
   const [isPopup2Open, setIsPopup2Open] = useState(false);
-
-  // For adding members
   const [emailInput, setEmailInput] = useState('');
   const [memberEmails, setMemberEmails] = useState<string[]>([]);
-
-  // Scroll reference
   const scrollRef = useRef<ScrollView | null>(null);
 
-  // ---------------------------------------------------------
-  // 1) Fetch the current user’s sub + nickname from Auth
-  // ---------------------------------------------------------
+  
   useEffect(() => {
     (async () => {
       try {
@@ -104,9 +79,7 @@ export default function PrivateMessagePage() {
     })();
   }, []);
 
-  // ---------------------------------------------------------
-  // 2) Fetch Group by ID + initial messages
-  // ---------------------------------------------------------
+ 
   useEffect(() => {
     if (!groupId) {
       setLoading(false);
@@ -116,7 +89,7 @@ export default function PrivateMessagePage() {
 
     (async () => {
       try {
-        // fetch group by ID
+        
         const { data: groupData } = await client.models.Group.get({ id: String(groupId) });
         if (!groupData) {
           setGroupNotFound(true);
@@ -125,11 +98,10 @@ export default function PrivateMessagePage() {
         }
         setGroupDetails(groupData);
 
-        // fetch messages
         const msgsRes = await client.models.GroupMessage.list({
           filter: { groupId: { eq: groupData.id } },
         });
-        // sort them by creation time
+        
         const sorted = [...msgsRes.data].sort(
           (a, b) => new Date(a.createdAt || 0).getTime() - new Date(b.createdAt || 0).getTime()
         );
@@ -142,9 +114,7 @@ export default function PrivateMessagePage() {
     })();
   }, [groupId]);
 
-  // ---------------------------------------------------------
-  // 3) Subscribe to new messages with onCreate
-  // ---------------------------------------------------------
+ 
   useEffect(() => {
     if (!groupDetails?.id) return;
     const subscription = client.models.GroupMessage
@@ -159,23 +129,18 @@ export default function PrivateMessagePage() {
     return () => subscription.unsubscribe();
   }, [groupDetails?.id]);
 
-  // ---------------------------------------------------------
-  // 4) Check if user is in group, fetch group members
-  // ---------------------------------------------------------
   useEffect(() => {
     if (!groupDetails?.id || !fetchedUserId) return;
     (async () => {
       try {
-        // list all groupUser records for this group
+       
         const groupUserRes = await client.models.GroupUser.list({
           filter: { groupId: { eq: groupDetails.id } },
         });
 
-        // see if current user is in group
         const inGroup = groupUserRes.data.some((gu) => gu.userId === fetchedUserId);
         setIsUserInGroup(inGroup);
 
-        // build user list
         const membersList: {
           userId: string;
           userNickname: string;
@@ -184,7 +149,7 @@ export default function PrivateMessagePage() {
         }[] = [];
 
         for (const gu of groupUserRes.data) {
-          // fetch userIndex to get role, etc.
+          
           const idxResp = await client.models.UserIndex.list({
             filter: { userId: { eq: gu.userId } },
           });
@@ -209,20 +174,15 @@ export default function PrivateMessagePage() {
     })();
   }, [groupDetails?.id, fetchedUserId]);
 
-  // ---------------------------------------------------------
-  // 5) Scroll to bottom whenever msgs update
-  // ---------------------------------------------------------
   useEffect(() => {
     setTimeout(() => {
       scrollRef.current?.scrollToEnd({ animated: true });
     }, 300);
   }, [msgs]);
 
-  // ---------------------------------------------------------
-  // 6) Sending a message (robust fix: userId in message)
-  // ---------------------------------------------------------
   async function handleSubmit() {
     if (!groupDetails?.id) return;
+
     if (msgText.length > 500) {
       setIsOverLimit(true);
       setShake(true);
@@ -233,7 +193,6 @@ export default function PrivateMessagePage() {
       return;
     }
 
-    // optional: re-fetch the user's latest nickname from DB
     try {
       const idxRes = await client.models.UserIndex.list({
         filter: { userId: { eq: fetchedUserId } },
@@ -245,12 +204,11 @@ export default function PrivateMessagePage() {
       console.error('Error refreshing nickname:', err);
     }
 
-    // text message
     if (msgText.trim()) {
       try {
         await client.models.GroupMessage.create({
           groupId: groupDetails.id,
-          userId: fetchedUserId, // robust fix
+          userId: fetchedUserId, 
           userNickname,
           type: 'text',
           content: msgText.trim(),
@@ -261,27 +219,8 @@ export default function PrivateMessagePage() {
         setMsgText('');
       }
     }
-
-    // if a file was chosen
-    if (msgFile) {
-      try {
-        const up = await uploadData({ data: msgFile, path: `chat-pics/${msgFile.name}` });
-        const itemWithPath = await up.result;
-        await client.models.GroupMessage.create({
-          groupId: groupDetails.id,
-          userId: fetchedUserId,
-          userNickname,
-          type: 'image',
-          picId: itemWithPath.path,
-        });
-        setMsgFile(null);
-      } catch (err) {
-        console.error('Error uploading file:', err);
-      }
-    }
   }
 
-  // =============== Add Members Popup ===============
   function openPopup() {
     setIsPopupOpen(true);
   }
@@ -291,7 +230,6 @@ export default function PrivateMessagePage() {
   async function handleEmailAddSubmit() {
     if (!groupDetails?.id) return;
 
-    // If leftover text
     if (emailInput.trim()) {
       setMemberEmails((prev) => [...prev, emailInput.trim()]);
       setEmailInput('');
@@ -305,7 +243,7 @@ export default function PrivateMessagePage() {
         });
         if (idxRes.data.length > 0) {
           const userRec = idxRes.data[0];
-          // see if they're already in group
+
           const guCheck = await client.models.GroupUser.list({
             filter: { groupId: { eq: groupDetails.id }, userId: { eq: userRec.userId } },
           });
@@ -317,7 +255,7 @@ export default function PrivateMessagePage() {
               role: 'member',
               userNickname: userRec.userNickname,
             });
-            // system msg
+       
             await client.models.GroupMessage.create({
               groupId: groupDetails.id,
               userId: 'system-id',
@@ -335,7 +273,6 @@ export default function PrivateMessagePage() {
     }
   }
 
-  // =============== Leave Group Popup ===============
   function openPopup2() {
     setIsPopup2Open(true);
   }
@@ -350,7 +287,6 @@ export default function PrivateMessagePage() {
       });
       if (guRes.data.length > 0) {
         await client.models.GroupUser.delete({ id: guRes.data[0].id });
-        // system msg
         await client.models.GroupMessage.create({
           groupId: groupDetails.id,
           userId: 'system-id',
@@ -367,18 +303,6 @@ export default function PrivateMessagePage() {
     }
   }
 
-  // Payment / VIP placeholders (adjust if you have real code):
-  async function handlePaymentLinkClick() {
-    Alert.alert('Payment link clicked');
-  }
-  async function handleManagementLinkClick() {
-    Alert.alert('Management link clicked');
-  }
-  async function handleVipLambdaClick() {
-    Alert.alert('VIP Lambda clicked');
-  }
-
-  // Render states
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -404,7 +328,6 @@ export default function PrivateMessagePage() {
     );
   }
 
-  // current user's role in group
   const me = fetchedUsers.find((u) => u.userId === fetchedUserId);
   const currentUserRole = me?.role || '';
 
@@ -429,7 +352,6 @@ export default function PrivateMessagePage() {
                 key={`${user.userId}-${idx}`}
                 style={{ marginRight: 6 }}
                 onPress={() => {
-                  // tap user nickname => open profile
                   if (user.userIndexId) {
                     router.push(`/profile?userIndexId=${user.userIndexId}`);
                   }
@@ -443,20 +365,20 @@ export default function PrivateMessagePage() {
             ))}
           </ScrollView>
 
+          {/* Tapping group name goes to group-details */}
           {groupDetails?.id && (
-    <TouchableOpacity
-      style={[{ position: 'absolute', left: '40%' }]}
-      onPress={() => {
-        router.push({
-          pathname: '../group-details',
-          params: { groupID: groupDetails.id },
-        });        
-      }}
-    >
-      <Text style={styles.chatTitle}>{groupDetails?.groupname}</Text>
-    </TouchableOpacity>
-  )}
-
+            <TouchableOpacity
+              style={[{ position: 'absolute', left: '40%' }]}
+              onPress={() => {
+                router.push({
+                  pathname: '../group-details',
+                  params: { groupID: groupDetails.id },
+                });
+              }}
+            >
+              <Text style={styles.chatTitle}>{groupDetails?.groupname}</Text>
+            </TouchableOpacity>
+          )}
 
           {/* Icons on the right */}
           <View style={styles.headerIconsContainer}>
@@ -468,23 +390,6 @@ export default function PrivateMessagePage() {
             <TouchableOpacity style={{ marginRight: 14 }} onPress={openPopup}>
               <FontAwesome5 name="plus" size={20} color="red" />
             </TouchableOpacity>
-            {currentUserRole !== 'VIP' && groupDetails?.chatstatus !== 'Activated' && (
-              <TouchableOpacity style={{ marginRight: 14 }} onPress={handlePaymentLinkClick}>
-                <FontAwesome5 name="user-secret" size={20} color="gold" />
-              </TouchableOpacity>
-            )}
-            {currentUserRole === 'VIP' && (
-              <TouchableOpacity style={{ marginRight: 14 }} onPress={handleManagementLinkClick}>
-                <Ionicons name="settings-sharp" size={22} color="black" />
-              </TouchableOpacity>
-            )}
-            {(currentUserRole === 'Owner' ||
-              (currentUserRole === 'VIP' && groupDetails?.adminId === fetchedUserId)) &&
-              groupDetails?.chatstatus !== 'Activated' && (
-                <TouchableOpacity onPress={handleVipLambdaClick}>
-                  <FontAwesome5 name="lock" size={20} color="black" />
-                </TouchableOpacity>
-              )}
           </View>
         </View>
 
@@ -504,7 +409,11 @@ export default function PrivateMessagePage() {
                 {memberEmails.map((em) => (
                   <View key={em} style={styles.emailChip}>
                     <Text>{em}</Text>
-                    <TouchableOpacity onPress={() => setMemberEmails((prev) => prev.filter((x) => x !== em))}>
+                    <TouchableOpacity
+                      onPress={() =>
+                        setMemberEmails((prev) => prev.filter((x) => x !== em))
+                      }
+                    >
                       <Text style={{ marginLeft: 4, color: 'red' }}>×</Text>
                     </TouchableOpacity>
                   </View>
@@ -532,20 +441,23 @@ export default function PrivateMessagePage() {
         </Modal>
 
         {/* MESSAGES */}
-        <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
+        <KeyboardAvoidingView
+          style={{ flex: 1 }}
+          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        >
           <ScrollView ref={scrollRef} style={styles.messagesContainer}>
             {msgs.map((m) => {
-              // robust fix: store userId in GroupMessage
-              const isSystem = (m.type === 'system');
-              const isMine = (m.userId === fetchedUserId);
-
-              // find user in the fetchedUsers array
+              const isSystem = m.type === 'system';
+              const isMine = m.userId === fetchedUserId;
               const matchedUser = fetchedUsers.find((fu) => fu.userId === m.userId);
               const role = matchedUser?.role || '';
 
               if (isSystem) {
                 return (
-                  <View key={m.id} style={{ alignSelf: 'center', marginVertical: 4, opacity: 0.6 }}>
+                  <View
+                    key={m.id}
+                    style={{ alignSelf: 'center', marginVertical: 4, opacity: 0.6 }}
+                  >
                     <Text style={{ fontStyle: 'italic' }}>{m.content}</Text>
                     <Text style={{ fontSize: 10 }}>{formatTime(m.createdAt)}</Text>
                   </View>
@@ -572,7 +484,6 @@ export default function PrivateMessagePage() {
                   >
                     <TouchableOpacity
                       onPress={() => {
-                        // Tap nickname => open profile
                         if (matchedUser?.userIndexId) {
                           router.push(`/profile?userIndexId=${matchedUser.userIndexId}`);
                         }
@@ -587,6 +498,7 @@ export default function PrivateMessagePage() {
                     </TouchableOpacity>
 
                     {m.content ? <Text>{m.content}</Text> : null}
+                    {/* Keep displaying images if they exist, but removed sending to implement later */}
                     {m.picId && (
                       <Image
                         source={{ uri: `https://YOUR-S3-OR-CF-DOMAIN/${m.picId}` }}
@@ -603,16 +515,7 @@ export default function PrivateMessagePage() {
 
           {/* Compose bar */}
           <View style={styles.composeBar}>
-            <TouchableOpacity
-              style={styles.fileButton}
-              onPress={async () => {
-                const chosen = await pickImage();
-                if (chosen) setMsgFile(chosen);
-              }}
-            >
-              <Text style={{ color: '#fff' }}>File</Text>
-            </TouchableOpacity>
-
+            {/* Removed file picker button here */}
             <TextInput
               style={[
                 styles.composeInput,
@@ -669,12 +572,6 @@ const styles = StyleSheet.create({
     borderTopColor: '#ccc',
     borderTopWidth: 1,
     backgroundColor: '#fafafa',
-  },
-  fileButton: {
-    backgroundColor: '#777',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 6,
   },
   composeInput: {
     flex: 1,

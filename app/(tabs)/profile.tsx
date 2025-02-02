@@ -1,7 +1,3 @@
-/* app/profile.tsx (Example)
-   A React Native version of your web-based ProfilePage
-   with fallback to current user if no userIndexId param is given.
-*/
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -17,27 +13,17 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-
-// AWS Amplify imports
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { generateClient } from 'aws-amplify/api';
 import { uploadData } from 'aws-amplify/storage';
 import { Schema } from '../../amplify/data/resource';
-
-// Authenticator (for signOut)
 import { useAuthenticator } from '@aws-amplify/ui-react-native';
-
-// Icons from Expo Vector Icons
+import { deleteUser } from 'aws-amplify/auth';
 import { FontAwesome5 } from '@expo/vector-icons';
 import { Ionicons } from '@expo/vector-icons';
 
-// Initialize Amplify client
 const client = generateClient<Schema>();
 
-/** 
- * For picking images in React Native, you’d use expo-image-picker. 
- * Below is a placeholder that returns null.
- */
 async function pickImage(): Promise<File | null> {
   return null;
 }
@@ -47,22 +33,12 @@ type Role = 'Owner' | 'Lawyer' | 'User' | 'VIP';
 
 export default function ProfilePage() {
   const router = useRouter();
-  // E.g. /profile?userIndexId=someRecordId
-  // If none is provided, userIndexId might be undefined
   const { userIndexId } = useLocalSearchParams();
-
   const { signOut } = useAuthenticator();
-
-  // Profile data
   const [profileData, setProfileData] = useState<AmplifyUserIndex | null>(null);
-
-  // Current user role, e.g. 'Owner', 'User', ...
   const [currentUserRole, setCurrentUserRole] = useState<Role | null>(null);
   const [isSelf, setIsSelf] = useState(false);
-
   const [errorMessage, setErrorMessage] = useState('');
-
-  // Editing state
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [newNickname, setNewNickname] = useState('');
   const [isEditingBio, setIsEditingBio] = useState(false);
@@ -74,9 +50,6 @@ export default function ProfilePage() {
 
   const [loading, setLoading] = useState(true);
 
-  // ------------------------------------------------------
-  // 1. Load Profile: if no userIndexId, fallback to self
-  // ------------------------------------------------------
   useEffect(() => {
     let isMounted = true;
 
@@ -85,7 +58,6 @@ export default function ProfilePage() {
       setErrorMessage('');
 
       try {
-        // A) Get current user sub from session
         const session = await fetchAuthSession();
         const currentUserSub = session.tokens?.idToken?.payload?.sub;
         if (!currentUserSub) {
@@ -96,43 +68,35 @@ export default function ProfilePage() {
           return;
         }
 
-        // B) Decide which 'id' to use for UserIndex.get()
-        let finalIndexId = userIndexId as string | undefined; // from query param
-
+        
+        let finalIndexId = userIndexId as string | undefined;
         if (!finalIndexId) {
-          // No param given, so let's find the current user’s record
-          // We do a .list() to get the record(s) for userId == sub
+          
           const currUserRes = await client.models.UserIndex.list({
             filter: { userId: { eq: currentUserSub } },
           });
           if (!isMounted) return;
-
           if (currUserRes.data.length === 0) {
-            // current user has no UserIndex record
             setErrorMessage('No user index found for current user');
             setLoading(false);
             return;
           }
-
-          // Use the record's auto-generated "id" for the .get() call
           finalIndexId = currUserRes.data[0].id;
         }
 
-        // C) Now finalIndexId definitely has something
+        
         const userIndexRes = await client.models.UserIndex.get({ id: String(finalIndexId) });
         if (!isMounted) return;
 
         if (!userIndexRes.data) {
-          // Could happen if the param or finalIndexId is invalid
           setErrorMessage('Profile not found');
           setLoading(false);
           return;
         }
 
-        // D) set the profile data
         setProfileData(userIndexRes.data);
 
-        // E) Check if the *current user* is the same as the profile’s user
+        
         const currUserSelfRes = await client.models.UserIndex.list({
           filter: { userId: { eq: currentUserSub } },
         });
@@ -154,15 +118,12 @@ export default function ProfilePage() {
     }
 
     loadProfile();
-
     return () => {
       isMounted = false;
     };
   }, [userIndexId]);
 
-  // ------------------------------------------------------
-  // 2. File upload handling (placeholder)
-  // ------------------------------------------------------
+  
   async function handleUpload() {
     if (!profileData) return;
     try {
@@ -175,7 +136,6 @@ export default function ProfilePage() {
       });
       const itemWithPath = await uploadResponse.result;
 
-      // Then update user’s photoId
       await client.models.UserIndex.update({
         id: profileData.id,
         userId: profileData.userId,
@@ -183,7 +143,6 @@ export default function ProfilePage() {
         photoId: itemWithPath.path,
       });
 
-      // refetch updated profile
       const updatedRes = await client.models.UserIndex.get({ id: profileData.id });
       setProfileData(updatedRes.data);
     } catch (error) {
@@ -193,13 +152,10 @@ export default function ProfilePage() {
     }
   }
 
-  // ------------------------------------------------------
-  // 3. Editing Nickname, Bio, Role, Locked Bio
-  // ------------------------------------------------------
   async function handleNicknameSave() {
     if (!profileData) return;
     try {
-      // 1) update main userIndex
+     
       await client.models.UserIndex.update({
         id: profileData.id,
         userId: profileData.userId,
@@ -207,7 +163,6 @@ export default function ProfilePage() {
         userNickname: newNickname,
       });
 
-      // 2) also update GroupUser records so the new nickname appears in chats
       const groupUserRes = await client.models.GroupUser.list({
         filter: { userId: { eq: profileData.userId } },
       });
@@ -218,7 +173,6 @@ export default function ProfilePage() {
         });
       }
 
-      // 3) refresh
       const updatedProfileRes = await client.models.UserIndex.get({ id: profileData.id });
       setProfileData(updatedProfileRes.data);
 
@@ -299,9 +253,74 @@ export default function ProfilePage() {
     }
   }
 
-  // ------------------------------------------------------
-  // 4. Render
-  // ------------------------------------------------------
+  async function handleDeleteAccount() {
+    if (!profileData) return;
+
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to delete your account? This action is irreversible.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              const groupUserRes = await client.models.GroupUser.list({
+                filter: { userId: { eq: profileData.userId } },
+              });
+
+              for (const membership of groupUserRes.data) {
+                
+                const groupResp = await client.models.Group.get({ id: membership.groupId });
+                const group = groupResp.data;
+                if (!group) continue;
+
+                
+                if (group.adminId === profileData.userId) {
+                  await client.models.Group.delete({ id: group.id });
+                } else {
+                  
+                  await client.models.GroupUser.delete({ id: membership.id });
+
+                  
+                  await client.models.GroupMessage.create({
+                    groupId: group.id,
+                    userId: 'system-id',
+                    userNickname: 'System',
+                    type: 'system',
+                    content: `${profileData.userNickname || 'A user'} has deleted their account.`,
+                  });
+                }
+              }
+
+              await client.models.UserIndex.delete({ id: profileData.id });
+
+              async function handleDeleteUser() {
+                try {
+                  await deleteUser();
+                } catch (error) {
+                  console.log(error);
+                }
+              }
+
+              await handleDeleteUser();
+
+              await signOut();
+
+              router.replace('/(tabs)/groups');
+            } catch (err) {
+              console.error('Error deleting account:', err);
+              setErrorMessage('Error deleting account. Please try again.');
+              setTimeout(() => setErrorMessage(''), 4000);
+            }
+          },
+        },
+      ]
+    );
+  }
+
+  
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -322,14 +341,16 @@ export default function ProfilePage() {
     );
   }
 
-  // If we have some error but do have partial profileData, we’ll still render below
   return (
     <View style={styles.container}>
+
       {/* Top row: Back arrow & SignOut button */}
+
       <View style={styles.topRow}>
         <TouchableOpacity onPress={() => router.back()} style={styles.topButton}>
           <Ionicons name="arrow-back" size={22} color="#007AFF" />
         </TouchableOpacity>
+
         <TouchableOpacity onPress={signOut} style={styles.topButton}>
           <Text style={{ color: '#007AFF', fontWeight: 'bold' }}>Sign Out</Text>
         </TouchableOpacity>
@@ -355,7 +376,10 @@ export default function ProfilePage() {
                 style={styles.profileImage}
               />
             ) : (
-              <Image source={require('../../assets/images/icon.png')} style={styles.profileImage} />
+              <Image
+                source={require('../../assets/images/icon.png')}
+                style={styles.profileImage}
+              />
             )}
             {(isSelf || currentUserRole === 'Owner') && (
               <TouchableOpacity
@@ -456,7 +480,7 @@ export default function ProfilePage() {
             )}
           </View>
 
-          {/* Locked Bio */}
+          {/* Locked Bio (only editable by Owner, in this example) */}
           <View style={{ marginTop: 16 }}>
             {isEditingLockedBio ? (
               <>
@@ -501,7 +525,7 @@ export default function ProfilePage() {
             )}
           </View>
 
-          {/* Role */}
+          {/* Role (only editable by Owner) */}
           <View style={{ marginTop: 16 }}>
             <View style={styles.rowCenter}>
               <Text style={{ color: '#666' }}>Role: {profileData.RedPill}</Text>
@@ -519,29 +543,16 @@ export default function ProfilePage() {
             </View>
             {isEditingRole && (
               <View style={{ marginTop: 8 }}>
-                {/* Simple "picker" approach. Replace with a proper RN Picker if you like */}
-                <TouchableOpacity
-                  style={styles.roleChoice}
-                  onPress={() => setNewRole('Owner')}
-                >
+                <TouchableOpacity style={styles.roleChoice} onPress={() => setNewRole('Owner')}>
                   <Text>Owner</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.roleChoice}
-                  onPress={() => setNewRole('Lawyer')}
-                >
+                <TouchableOpacity style={styles.roleChoice} onPress={() => setNewRole('Lawyer')}>
                   <Text>Lawyer</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.roleChoice}
-                  onPress={() => setNewRole('User')}
-                >
+                <TouchableOpacity style={styles.roleChoice} onPress={() => setNewRole('User')}>
                   <Text>User</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.roleChoice}
-                  onPress={() => setNewRole('VIP')}
-                >
+                <TouchableOpacity style={styles.roleChoice} onPress={() => setNewRole('VIP')}>
                   <Text>VIP</Text>
                 </TouchableOpacity>
 
@@ -562,6 +573,19 @@ export default function ProfilePage() {
               </View>
             )}
           </View>
+
+          {/* DELETE ACCOUNT button (only if it's your own profile) */}
+          
+          {isSelf && (
+            <View style={{ marginTop: 24 }}>
+              <TouchableOpacity
+                style={styles.deleteAccountButton}
+                onPress={handleDeleteAccount}
+              >
+                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Delete My Account</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </ScrollView>
       )}
     </View>
@@ -582,7 +606,7 @@ const styles = StyleSheet.create({
   topRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginTop: Platform.OS === 'ios' ? 50 : 20, // add safe area if needed
+    marginTop: Platform.OS === 'ios' ? 50 : 20,
     marginHorizontal: 16,
   },
   topButton: {
@@ -654,5 +678,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
     marginVertical: 4,
     borderRadius: 4,
+  },
+  deleteAccountButton: {
+    backgroundColor: 'red',
+    padding: 14,
+    borderRadius: 6,
+    alignItems: 'center',
   },
 });

@@ -1,4 +1,3 @@
-// app/(tabs)/groups.tsx
 import React, { useEffect, useState } from 'react';
 import {
   View,
@@ -11,14 +10,13 @@ import {
   Alert,
 } from 'react-native';
 
-import { Ionicons } from '@expo/vector-icons'; // replacing FaTimes, FaSignOutAlt
+import { Ionicons } from '@expo/vector-icons'; 
 import { useRouter } from 'expo-router';
 import { generateClient } from 'aws-amplify/api';
 import { Schema } from '../../amplify/data/resource';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
-// 1. Explicit type to ensure TS doesn’t complain about null or lazy loaders
 type AmplifyGroup = NonNullable<Schema['Group']['type']>;
 
 const client = generateClient<Schema>();
@@ -29,11 +27,7 @@ export default function GroupsPage() {
   const [fetchedUserId, setFetchedUserId] = useState('');
   const [userEmail, setUserEmail] = useState('');
   const [userNickname, setUserNickname] = useState('');
-
-  // 2. Use AmplifyGroup[] for groups
   const [groups, setGroups] = useState<AmplifyGroup[]>([]);
-
-  // For creating new group
   const [groupName, setGroupName] = useState('');
   const [memberEmails, setMemberEmails] = useState<string[]>([]);
   const [emailInput, setEmailInput] = useState('');
@@ -43,7 +37,6 @@ export default function GroupsPage() {
   const [leaveGroupId, setLeaveGroupId] = useState<string | null>(null);
   const [groupAdded, setGroupAdded] = useState(false);
 
-  // ========== 1. Fetch current user  ==========
   useEffect(() => {
     (async () => {
       try {
@@ -60,7 +53,6 @@ export default function GroupsPage() {
     })();
   }, []);
 
-  // ========== 2. Check/create user index  ==========
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -87,7 +79,6 @@ export default function GroupsPage() {
     };
   }, [fetchedUserId]);
 
-  // ========== 3. Fetch user’s groups  ==========
   useEffect(() => {
     (async () => {
       if (!fetchedUserId) return;
@@ -101,7 +92,7 @@ export default function GroupsPage() {
           const groupRes = await Promise.all(
             groupIds.map((gid) => client.models.Group.get({ id: gid }))
           );
-          // cast each group data to AmplifyGroup if not null
+        
           const userGroups = groupRes
             .map((res) => res.data as AmplifyGroup | null)
             .filter(Boolean) as AmplifyGroup[];
@@ -117,7 +108,6 @@ export default function GroupsPage() {
     })();
   }, [fetchedUserId, groupAdded]);
 
-  // ========== 4. onCreate subscription  ==========
   useEffect(() => {
     if (!fetchedUserId || !client.models.GroupUser?.onCreate) return;
 
@@ -131,7 +121,7 @@ export default function GroupsPage() {
                 id: groupUser.groupId,
               });
               if (groupResponse?.data) {
-                // cast to AmplifyGroup
+                
                 setGroups((prev) => [...prev, groupResponse.data as AmplifyGroup]);
               }
             } catch (err) {
@@ -145,7 +135,7 @@ export default function GroupsPage() {
     return () => groupUserSub.unsubscribe();
   }, [fetchedUserId]);
 
-  // ========== 5. onDelete subscription  ==========
+
   useEffect(() => {
     if (!fetchedUserId || !client.models.GroupUser?.onDelete) return;
 
@@ -163,7 +153,7 @@ export default function GroupsPage() {
     return () => groupUserDeleteSub.unsubscribe();
   }, [fetchedUserId]);
 
-  // ========== Move the ALERTS to separate useEffects instead of inline in return ==========
+
   useEffect(() => {
     if (deleteGroupId) {
       Alert.alert(
@@ -205,7 +195,7 @@ export default function GroupsPage() {
 
   const createGroup = async () => {
     setIsLoading(true);
-    // If user typed an email but didn't press "Add Email" yet:
+  
     if (emailInput.trim()) {
       setMemberEmails((prev) => [...prev, emailInput.trim()]);
       setEmailInput('');
@@ -238,7 +228,6 @@ export default function GroupsPage() {
         return;
       }
 
-      // Immediately update the groupUrlName to match group.id
       const { data: updatedGroup } = await client.models.Group.update({
         id: createdGroup.id,
         groupUrlName: createdGroup.id,
@@ -257,7 +246,6 @@ export default function GroupsPage() {
         userNickname,
       });
 
-      // Add the extra members
       for (const email of updatedEmails) {
         try {
           const userIndexRes = await client.models.UserIndex.list({
@@ -288,7 +276,7 @@ export default function GroupsPage() {
         }
       }
 
-      // Update local state with new group (as AmplifyGroup)
+    
       setGroups((prev) => [...prev, createdGroup as AmplifyGroup]);
       setGroupAdded(!groupAdded);
 
@@ -309,21 +297,21 @@ export default function GroupsPage() {
   const handleDeleteGroup = async () => {
     if (!deleteGroupId) return;
     try {
-      // delete group messages
+      
       const messagesRes = await client.models.GroupMessage.list({
         filter: { groupId: { eq: deleteGroupId } },
       });
       for (const msg of messagesRes.data) {
         await client.models.GroupMessage.delete({ id: msg.id });
       }
-      // delete GroupUser records
+      
       const groupUsersRes = await client.models.GroupUser.list({
         filter: { groupId: { eq: deleteGroupId } },
       });
       for (const gu of groupUsersRes.data) {
         await client.models.GroupUser.delete({ id: gu.id });
       }
-      // finally delete the group
+      
       await client.models.Group.delete({ id: deleteGroupId });
       setGroups((prev) => prev.filter((g) => g.id !== deleteGroupId));
       setDeleteGroupId(null);
