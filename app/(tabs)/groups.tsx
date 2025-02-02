@@ -276,10 +276,6 @@ export default function GroupsPage() {
         }
       }
 
-    
-      setGroups((prev) => [...prev, createdGroup as AmplifyGroup]);
-      setGroupAdded(!groupAdded);
-
       setGroupName('');
       setMemberEmails([]);
 
