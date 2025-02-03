@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import {
   View,
@@ -9,14 +8,13 @@ import {
   ActivityIndicator,
   TextInput,
   Alert,
-  Image,
   Platform,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
+import { useRouter } from 'expo-router';
 import { fetchAuthSession } from 'aws-amplify/auth';
 import { generateClient } from 'aws-amplify/api';
 import { uploadData } from 'aws-amplify/storage';
-import { Schema } from '../../amplify/data/resource';
+import { Schema } from '../../../amplify/data/resource';
 import { useAuthenticator } from '@aws-amplify/ui-react-native';
 import { deleteUser } from 'aws-amplify/auth';
 import { FontAwesome5 } from '@expo/vector-icons';
@@ -25,20 +23,21 @@ import { Ionicons } from '@expo/vector-icons';
 const client = generateClient<Schema>();
 
 async function pickImage(): Promise<File | null> {
+  // Implement your native image picker or remove this if not used
   return null;
 }
 
 type AmplifyUserIndex = Schema['UserIndex']['type'];
 type Role = 'Owner' | 'Lawyer' | 'User' | 'VIP';
 
-export default function ProfilePage() {
+export default function MyProfileScreen() {
   const router = useRouter();
-  const { userIndexId } = useLocalSearchParams();
   const { signOut } = useAuthenticator();
+
   const [profileData, setProfileData] = useState<AmplifyUserIndex | null>(null);
   const [currentUserRole, setCurrentUserRole] = useState<Role | null>(null);
-  const [isSelf, setIsSelf] = useState(false);
-  const [errorMessage, setErrorMessage] = useState('');
+
+  // Editing states
   const [isEditingNickname, setIsEditingNickname] = useState(false);
   const [newNickname, setNewNickname] = useState('');
   const [isEditingBio, setIsEditingBio] = useState(false);
@@ -49,66 +48,45 @@ export default function ProfilePage() {
   const [newLockedBio, setNewLockedBio] = useState('');
 
   const [loading, setLoading] = useState(true);
+  const [errorMessage, setErrorMessage] = useState('');
 
   useEffect(() => {
     let isMounted = true;
 
-    async function loadProfile() {
+    async function loadMyProfile() {
       setLoading(true);
       setErrorMessage('');
 
       try {
+        // 1) Get the current logged-in user SUB
         const session = await fetchAuthSession();
         const currentUserSub = session.tokens?.idToken?.payload?.sub;
         if (!currentUserSub) {
           if (isMounted) {
-            setErrorMessage('No current user sub found. Are you signed in?');
+            setErrorMessage('No current user found. Are you signed in?');
             setLoading(false);
           }
           return;
         }
 
-        
-        let finalIndexId = userIndexId as string | undefined;
-        if (!finalIndexId) {
-          
-          const currUserRes = await client.models.UserIndex.list({
-            filter: { userId: { eq: currentUserSub } },
-          });
-          if (!isMounted) return;
-          if (currUserRes.data.length === 0) {
-            setErrorMessage('No user index found for current user');
-            setLoading(false);
-            return;
-          }
-          finalIndexId = currUserRes.data[0].id;
-        }
-
-        
-        const userIndexRes = await client.models.UserIndex.get({ id: String(finalIndexId) });
-        if (!isMounted) return;
-
-        if (!userIndexRes.data) {
-          setErrorMessage('Profile not found');
-          setLoading(false);
-          return;
-        }
-
-        setProfileData(userIndexRes.data);
-
-        
-        const currUserSelfRes = await client.models.UserIndex.list({
+        // 2) Look up the user’s UserIndex record by userId = sub
+        const currUserRes = await client.models.UserIndex.list({
           filter: { userId: { eq: currentUserSub } },
         });
         if (!isMounted) return;
 
-        if (currUserSelfRes.data.length > 0) {
-          const me = currUserSelfRes.data[0];
-          setCurrentUserRole((me.RedPill as Role) || null);
-          setIsSelf(me.userId === userIndexRes.data.userId);
+        if (currUserRes.data.length === 0) {
+          setErrorMessage('No user index found for this account.');
+          setLoading(false);
+          return;
         }
+        const myIndex = currUserRes.data[0];
+
+        // 3) Save user data & role
+        setProfileData(myIndex);
+        setCurrentUserRole((myIndex.RedPill as Role) || null);
       } catch (err) {
-        console.error('Error fetching profile data:', err);
+        console.error('Error fetching my profile data:', err);
         if (isMounted) {
           setErrorMessage('Error fetching profile data');
         }
@@ -117,13 +95,13 @@ export default function ProfilePage() {
       }
     }
 
-    loadProfile();
+    loadMyProfile();
     return () => {
       isMounted = false;
     };
-  }, [userIndexId]);
+  }, []);
 
-  
+  // ----------------- Handlers ------------------
   async function handleUpload() {
     if (!profileData) return;
     try {
@@ -155,7 +133,6 @@ export default function ProfilePage() {
   async function handleNicknameSave() {
     if (!profileData) return;
     try {
-     
       await client.models.UserIndex.update({
         id: profileData.id,
         userId: profileData.userId,
@@ -163,16 +140,18 @@ export default function ProfilePage() {
         userNickname: newNickname,
       });
 
+      // Update any GroupUser records with the new nickname
       const groupUserRes = await client.models.GroupUser.list({
         filter: { userId: { eq: profileData.userId } },
       });
-      for (const groupUser of groupUserRes.data) {
+      for (const gu of groupUserRes.data) {
         await client.models.GroupUser.update({
-          id: groupUser.id,
+          id: gu.id,
           userNickname: newNickname,
         });
       }
 
+      // Refresh local data
       const updatedProfileRes = await client.models.UserIndex.get({ id: profileData.id });
       setProfileData(updatedProfileRes.data);
 
@@ -266,24 +245,23 @@ export default function ProfilePage() {
           style: 'destructive',
           onPress: async () => {
             try {
+              // Remove from all groups (or delete the group if you are admin)
               const groupUserRes = await client.models.GroupUser.list({
                 filter: { userId: { eq: profileData.userId } },
               });
 
               for (const membership of groupUserRes.data) {
-                
                 const groupResp = await client.models.Group.get({ id: membership.groupId });
                 const group = groupResp.data;
                 if (!group) continue;
 
-                
                 if (group.adminId === profileData.userId) {
+                  // If you're the admin, let's just delete the entire group
                   await client.models.Group.delete({ id: group.id });
                 } else {
-                  
+                  // Otherwise remove membership
                   await client.models.GroupUser.delete({ id: membership.id });
-
-                  
+                  // Post a system message
                   await client.models.GroupMessage.create({
                     groupId: group.id,
                     userId: 'system-id',
@@ -294,8 +272,10 @@ export default function ProfilePage() {
                 }
               }
 
+              // Delete your UserIndex
               await client.models.UserIndex.delete({ id: profileData.id });
 
+              // Delete Auth user
               async function handleDeleteUser() {
                 try {
                   await deleteUser();
@@ -306,8 +286,10 @@ export default function ProfilePage() {
 
               await handleDeleteUser();
 
+              // Sign out
               await signOut();
 
+              // Navigate away
               router.replace('/(tabs)/groups');
             } catch (err) {
               console.error('Error deleting account:', err);
@@ -320,7 +302,7 @@ export default function ProfilePage() {
     );
   }
 
-  
+  // ----------------- Render ------------------
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -341,12 +323,21 @@ export default function ProfilePage() {
     );
   }
 
+  if (!profileData) {
+    // If no error but still no data, just show something
+    return (
+      <View style={styles.centered}>
+        <Text>No profile data found.</Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-
-      {/* Top row: Back arrow & SignOut button */}
-
+      {/* Top row: potentially a "back arrow" if you came from another screen 
+          and a "Sign Out" on the right. */}
       <View style={styles.topRow}>
+        {/* If you don't want a back arrow on your own profile, you can remove this */}
         <TouchableOpacity onPress={() => router.back()} style={styles.topButton}>
           <Ionicons name="arrow-back" size={22} color="#007AFF" />
         </TouchableOpacity>
@@ -362,178 +353,127 @@ export default function ProfilePage() {
         </View>
       ) : null}
 
-      {!profileData ? (
-        <View style={styles.centered}>
-          <Text>No profile data found.</Text>
-        </View>
-      ) : (
-        <ScrollView contentContainerStyle={{ padding: 16 }}>
-          {/* Photo */}
-          <View style={styles.photoContainer}>
-            {profileData.photoId ? (
-              <Image
-                source={{ uri: `https://YOUR-S3-OR-CF-URL/${profileData.photoId}` }}
-                style={styles.profileImage}
+      <ScrollView contentContainerStyle={{ padding: 16 }}>
+        {/* Nickname Section */}
+        <View style={{ marginTop: 12 }}>
+          {isEditingNickname ? (
+            <>
+              <TextInput
+                style={styles.textInput}
+                value={newNickname}
+                onChangeText={setNewNickname}
               />
-            ) : (
-              <Image
-                source={require('../../assets/images/icon.png')}
-                style={styles.profileImage}
-              />
-            )}
-            {(isSelf || currentUserRole === 'Owner') && (
-              <TouchableOpacity
-                onPress={handleUpload}
-                style={styles.editPhotoButton}
-                accessibilityLabel="Edit Profile Picture"
-              >
-                <FontAwesome5 name="pen" size={14} color="#000" />
-              </TouchableOpacity>
-            )}
-          </View>
-
-          {/* Nickname */}
-          <View style={{ marginTop: 12 }}>
-            {isEditingNickname ? (
-              <>
-                <TextInput
-                  style={styles.textInput}
-                  value={newNickname}
-                  onChangeText={setNewNickname}
-                />
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity style={styles.saveButton} onPress={handleNicknameSave}>
-                    <Text style={{ color: '#fff' }}>Save</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.cancelButton}
-                    onPress={() => {
-                      setIsEditingNickname(false);
-                      setNewNickname(profileData.userNickname || '');
-                    }}
-                  >
-                    <Text style={{ color: '#fff' }}>Cancel</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            ) : (
-              <View style={styles.rowCenter}>
-                <Text style={styles.bigText}>{profileData.userNickname || 'No Nickname'}</Text>
-                {(isSelf || currentUserRole === 'Owner') && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setIsEditingNickname(true);
-                      setNewNickname(profileData.userNickname || '');
-                    }}
-                    style={{ marginLeft: 8 }}
-                  >
-                    <FontAwesome5 name="pen" size={14} color="#007AFF" />
-                  </TouchableOpacity>
-                )}
+              <View style={styles.buttonRow}>
+                <TouchableOpacity style={styles.saveButton} onPress={handleNicknameSave}>
+                  <Text style={{ color: '#fff' }}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => {
+                    setIsEditingNickname(false);
+                    setNewNickname(profileData.userNickname || '');
+                  }}
+                >
+                  <Text style={{ color: '#fff' }}>Cancel</Text>
+                </TouchableOpacity>
               </View>
-            )}
-            <Text style={{ color: 'gray' }}>{profileData.email}</Text>
-          </View>
-
-          {/* Bio */}
-          <View style={{ marginTop: 16 }}>
-            {isEditingBio ? (
-              <>
-                <TextInput
-                  style={[styles.textInput, { height: 80 }]}
-                  multiline
-                  value={newBio}
-                  onChangeText={setNewBio}
-                />
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity style={styles.saveButton} onPress={handleBioSave}>
-                    <Text style={{ color: '#fff' }}>Save</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.cancelButton}
-                    onPress={() => {
-                      setIsEditingBio(false);
-                      setNewBio(profileData.bio || '');
-                    }}
-                  >
-                    <Text style={{ color: '#fff' }}>Cancel</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            ) : (
-              <View style={styles.rowCenter}>
-                <Text style={{ color: '#333', flex: 1 }}>
-                  {profileData.bio || 'No bio available.'}
-                </Text>
-                {(isSelf || currentUserRole === 'Owner') && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setIsEditingBio(true);
-                      setNewBio(profileData.bio || '');
-                    }}
-                    style={{ marginLeft: 8 }}
-                  >
-                    <FontAwesome5 name="pen" size={14} color="#007AFF" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-          </View>
-
-          {/* Locked Bio (only editable by Owner, in this example) */}
-          <View style={{ marginTop: 16 }}>
-            {isEditingLockedBio ? (
-              <>
-                <TextInput
-                  style={[styles.textInput, { height: 80 }]}
-                  multiline
-                  value={newLockedBio}
-                  onChangeText={setNewLockedBio}
-                />
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity style={styles.saveButton} onPress={handleLockedBioSave}>
-                    <Text style={{ color: '#fff' }}>Save</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.cancelButton}
-                    onPress={() => {
-                      setIsEditingLockedBio(false);
-                      setNewLockedBio(profileData.lockedbio || '');
-                    }}
-                  >
-                    <Text style={{ color: '#fff' }}>Cancel</Text>
-                  </TouchableOpacity>
-                </View>
-              </>
-            ) : (
-              <View style={styles.rowCenter}>
-                <Text style={{ color: '#333', flex: 1, fontWeight: 'bold' }}>
-                  {profileData.lockedbio || 'No locked bio available.'}
-                </Text>
-                {currentUserRole === 'Owner' && (
-                  <TouchableOpacity
-                    onPress={() => {
-                      setIsEditingLockedBio(true);
-                      setNewLockedBio(profileData.lockedbio || '');
-                    }}
-                    style={{ marginLeft: 8 }}
-                  >
-                    <FontAwesome5 name="pen" size={14} color="#007AFF" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            )}
-          </View>
-
-          {/* Role (only editable by Owner) */}
-          <View style={{ marginTop: 16 }}>
+            </>
+          ) : (
             <View style={styles.rowCenter}>
-              <Text style={{ color: '#666' }}>Role: {profileData.RedPill}</Text>
+              <Text style={styles.bigText}>{profileData.userNickname || 'No Nickname'}</Text>
+              {/* You can always edit your own nickname */}
+              <TouchableOpacity
+                onPress={() => {
+                  setIsEditingNickname(true);
+                  setNewNickname(profileData.userNickname || '');
+                }}
+                style={{ marginLeft: 8 }}
+              >
+                <FontAwesome5 name="pen" size={14} color="#007AFF" />
+              </TouchableOpacity>
+            </View>
+          )}
+          <Text style={{ color: 'gray' }}>{profileData.email}</Text>
+        </View>
+
+        {/* Bio Section */}
+        <View style={{ marginTop: 16 }}>
+          {isEditingBio ? (
+            <>
+              <TextInput
+                style={[styles.textInput, { height: 80 }]}
+                multiline
+                value={newBio}
+                onChangeText={setNewBio}
+              />
+              <View style={styles.buttonRow}>
+                <TouchableOpacity style={styles.saveButton} onPress={handleBioSave}>
+                  <Text style={{ color: '#fff' }}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => {
+                    setIsEditingBio(false);
+                    setNewBio(profileData.bio || '');
+                  }}
+                >
+                  <Text style={{ color: '#fff' }}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <View style={styles.rowCenter}>
+              <Text style={{ color: '#333', flex: 1 }}>
+                {profileData.bio || 'No bio available.'}
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setIsEditingBio(true);
+                  setNewBio(profileData.bio || '');
+                }}
+                style={{ marginLeft: 8 }}
+              >
+                <FontAwesome5 name="pen" size={14} color="#007AFF" />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        {/* Locked Bio (editable if your role is Owner, optional logic) */}
+        <View style={{ marginTop: 16 }}>
+          {isEditingLockedBio ? (
+            <>
+              <TextInput
+                style={[styles.textInput, { height: 80 }]}
+                multiline
+                value={newLockedBio}
+                onChangeText={setNewLockedBio}
+              />
+              <View style={styles.buttonRow}>
+                <TouchableOpacity style={styles.saveButton} onPress={handleLockedBioSave}>
+                  <Text style={{ color: '#fff' }}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => {
+                    setIsEditingLockedBio(false);
+                    setNewLockedBio(profileData.lockedbio || '');
+                  }}
+                >
+                  <Text style={{ color: '#fff' }}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
+            </>
+          ) : (
+            <View style={styles.rowCenter}>
+              <Text style={{ color: '#333', flex: 1, fontWeight: 'bold' }}>
+                {profileData.lockedbio || 'No locked bio available.'}
+              </Text>
               {currentUserRole === 'Owner' && (
                 <TouchableOpacity
                   onPress={() => {
-                    setIsEditingRole(true);
-                    setNewRole((profileData.RedPill as Role) || '');
+                    setIsEditingLockedBio(true);
+                    setNewLockedBio(profileData.lockedbio || '');
                   }}
                   style={{ marginLeft: 8 }}
                 >
@@ -541,53 +481,61 @@ export default function ProfilePage() {
                 </TouchableOpacity>
               )}
             </View>
-            {isEditingRole && (
-              <View style={{ marginTop: 8 }}>
-                <TouchableOpacity style={styles.roleChoice} onPress={() => setNewRole('Owner')}>
-                  <Text>Owner</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.roleChoice} onPress={() => setNewRole('Lawyer')}>
-                  <Text>Lawyer</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.roleChoice} onPress={() => setNewRole('User')}>
-                  <Text>User</Text>
-                </TouchableOpacity>
-                <TouchableOpacity style={styles.roleChoice} onPress={() => setNewRole('VIP')}>
-                  <Text>VIP</Text>
-                </TouchableOpacity>
+          )}
+        </View>
 
-                <View style={styles.buttonRow}>
-                  <TouchableOpacity style={styles.saveButton} onPress={handleRoleSave}>
-                    <Text style={{ color: '#fff' }}>Save</Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={styles.cancelButton}
-                    onPress={() => {
-                      setIsEditingRole(false);
-                      setNewRole((profileData.RedPill as Role) || '');
-                    }}
-                  >
-                    <Text style={{ color: '#fff' }}>Cancel</Text>
-                  </TouchableOpacity>
-                </View>
-              </View>
+        {/* Role (only editable by Owner) */}
+        <View style={{ marginTop: 16 }}>
+          <View style={styles.rowCenter}>
+            <Text style={{ color: '#666' }}>Role: {profileData.RedPill}</Text>
+            {currentUserRole === 'Owner' && (
+              <TouchableOpacity
+                onPress={() => {
+                  setIsEditingRole(true);
+                  setNewRole((profileData.RedPill as Role) || '');
+                }}
+                style={{ marginLeft: 8 }}
+              >
+                <FontAwesome5 name="pen" size={14} color="#007AFF" />
+              </TouchableOpacity>
             )}
           </View>
-
-          {/* DELETE ACCOUNT button (only if it's your own profile) */}
-          
-          {isSelf && (
-            <View style={{ marginTop: 24 }}>
-              <TouchableOpacity
-                style={styles.deleteAccountButton}
-                onPress={handleDeleteAccount}
-              >
-                <Text style={{ color: '#fff', fontWeight: 'bold' }}>Delete My Account</Text>
-              </TouchableOpacity>
+          {isEditingRole && (
+            <View style={{ marginTop: 8 }}>
+              {['Owner', 'Lawyer', 'User', 'VIP'].map((r) => (
+                <TouchableOpacity
+                  key={r}
+                  style={styles.roleChoice}
+                  onPress={() => setNewRole(r as Role)}
+                >
+                  <Text>{r}</Text>
+                </TouchableOpacity>
+              ))}
+              <View style={styles.buttonRow}>
+                <TouchableOpacity style={styles.saveButton} onPress={handleRoleSave}>
+                  <Text style={{ color: '#fff' }}>Save</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.cancelButton}
+                  onPress={() => {
+                    setIsEditingRole(false);
+                    setNewRole((profileData.RedPill as Role) || '');
+                  }}
+                >
+                  <Text style={{ color: '#fff' }}>Cancel</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           )}
-        </ScrollView>
-      )}
+        </View>
+
+        {/* DELETE ACCOUNT button */}
+        <View style={{ marginTop: 24 }}>
+          <TouchableOpacity style={styles.deleteAccountButton} onPress={handleDeleteAccount}>
+            <Text style={{ color: '#fff', fontWeight: 'bold' }}>Delete My Account</Text>
+          </TouchableOpacity>
+        </View>
+      </ScrollView>
     </View>
   );
 }
@@ -620,24 +568,6 @@ const styles = StyleSheet.create({
   errorContainer: {
     padding: 8,
     alignItems: 'center',
-  },
-  photoContainer: {
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginTop: 20,
-  },
-  profileImage: {
-    width: 120,
-    height: 120,
-    borderRadius: 60,
-  },
-  editPhotoButton: {
-    position: 'absolute',
-    bottom: 0,
-    right: 0,
-    backgroundColor: '#ccc',
-    borderRadius: 20,
-    padding: 6,
   },
   bigText: {
     fontSize: 20,
