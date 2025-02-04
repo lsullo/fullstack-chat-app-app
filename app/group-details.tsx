@@ -364,7 +364,7 @@ const GroupDetails: React.FC<GroupDetailsProps> = () => {
                 style={styles.infoWrapper}
                 onPress={() => {
                   if (user.userIndexId) {
-                    router.push(`/profile?userIndexId=${user.userIndexId}`);
+                    router.push(`/rprofile?userIndexId=${user.userIndexId}`);
                   }
                 }}
               >

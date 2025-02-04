@@ -353,7 +353,7 @@ export default function PrivateMessagePage() {
                 style={{ marginRight: 6 }}
                 onPress={() => {
                   if (user.userIndexId) {
-                    router.push(`/profile?userIndexId=${user.userIndexId}`);
+                    router.push(`/rprofile?userIndexId=${user.userIndexId}`);
                   }
                 }}
               >
@@ -485,7 +485,7 @@ export default function PrivateMessagePage() {
                     <TouchableOpacity
                       onPress={() => {
                         if (matchedUser?.userIndexId) {
-                          router.push(`/profile?userIndexId=${matchedUser.userIndexId}`);
+                          router.push(`/rprofile?userIndexId=${matchedUser.userIndexId}`);
                         }
                       }}
                     >

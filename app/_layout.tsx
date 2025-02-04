@@ -14,6 +14,8 @@ export default function RootLayout() {
           <Stack.Screen name="(tabs)" /> 
           {/* add routes here if needed */}
         </Stack>
+        
+        
       </ProtectedLayout>
     </Authenticator.Provider>
   );
