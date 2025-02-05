@@ -4,7 +4,7 @@
     "slug": "redactedchats",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/RIDEA2.png",
+    "icon": "./assets/images/bombac.png",
     "scheme": "myapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
