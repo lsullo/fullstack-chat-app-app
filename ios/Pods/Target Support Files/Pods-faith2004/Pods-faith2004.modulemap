@@ -1,0 +1,6 @@
+module Pods_faith2004 {
+  umbrella header "Pods-faith2004-umbrella.h"
+
+  export *
+  module * { export * }
+}
